@@ -6,30 +6,53 @@ import PostCard from "@/components/PostCard";
 import TaskCard from "@/components/TaskCard";
 import ActivityCard from "@/components/ActivityCard";
 import FloatingActionButton from "@/components/FloatingActionButton";
+import CreatePostDialog from "@/components/CreatePostDialog";
+import { useAuth } from "@/hooks/useAuth";
+import { usePosts } from "@/hooks/usePosts";
 import { toast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
+import { format } from "date-fns";
 
 import bashEventImage from "@/assets/bash-event.jpg";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("posts");
+  const [createPostOpen, setCreatePostOpen] = useState(false);
+  const { isAuthenticated, user, profile, loading: authLoading } = useAuth();
+  const { posts, loading: postsLoading, refetch } = usePosts();
+  const navigate = useNavigate();
 
   const handleShareIdea = () => {
-    toast({
-      title: "Coming Soon!",
-      description: "Share your ideas with the CYA community.",
-    });
+    if (!isAuthenticated) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to share your ideas.",
+        variant: "destructive",
+      });
+      navigate("/auth");
+      return;
+    }
+    setCreatePostOpen(true);
   };
 
   const handleFABClick = () => {
-    toast({
-      title: "Quick Action",
-      description: "Create a new post or activity.",
-    });
+    if (!isAuthenticated) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to create a post.",
+        variant: "destructive",
+      });
+      navigate("/auth");
+      return;
+    }
+    setCreatePostOpen(true);
   };
 
-  const posts = [
+  // Sample posts if no database posts exist
+  const samplePosts = [
     {
-      id: 1,
+      id: "sample-1",
       username: "dennie",
       date: "12/19/2025",
       hashtag: "Bash",
@@ -39,22 +62,30 @@ const Index = () => {
       comments: 8,
     },
     {
-      id: 2,
+      id: "sample-2",
       username: "sarah_k",
       date: "12/18/2025",
       hashtag: "Worship",
+      image: undefined,
+      title: undefined,
       likes: 42,
       comments: 15,
     },
-    {
-      id: 3,
-      username: "mike_cya",
-      date: "12/17/2025",
-      hashtag: "YouthEmpowerment",
-      likes: 31,
-      comments: 6,
-    },
   ];
+
+  // Combine database posts with sample posts for display
+  const displayPosts = posts.length > 0
+    ? posts.map((post) => ({
+        id: post.id,
+        username: post.username,
+        date: format(new Date(post.created_at), "MM/dd/yyyy"),
+        hashtag: post.hashtag,
+        image: post.image_url || undefined,
+        title: post.title || undefined,
+        likes: post.likes_count,
+        comments: post.comments_count,
+      }))
+    : samplePosts;
 
   const tasks = [
     {
@@ -137,20 +168,26 @@ const Index = () => {
             <IdeasSection onShareIdea={handleShareIdea} />
             
             <div className="px-4 py-4 space-y-4">
-              {posts.map((post, index) => (
-                <PostCard
-                  key={post.id}
-                  username={post.username}
-                  date={post.date}
-                  hashtag={post.hashtag}
-                  image={post.image}
-                  title={post.title}
-                  likes={post.likes}
-                  comments={post.comments}
-                  className="animate-slide-up"
-                  style={{ animationDelay: `${index * 0.1}s` } as React.CSSProperties}
-                />
-              ))}
+              {postsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                </div>
+              ) : (
+                displayPosts.map((post, index) => (
+                  <PostCard
+                    key={post.id}
+                    username={post.username}
+                    date={post.date}
+                    hashtag={post.hashtag}
+                    image={post.image}
+                    title={post.title}
+                    likes={post.likes}
+                    comments={post.comments}
+                    className="animate-slide-up"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  />
+                ))
+              )}
             </div>
           </>
         )}
@@ -172,7 +209,7 @@ const Index = () => {
                 completed={task.completed}
                 priority={task.priority}
                 className="animate-slide-up"
-                style={{ animationDelay: `${index * 0.1}s` } as React.CSSProperties}
+                style={{ animationDelay: `${index * 0.1}s` }}
               />
             ))}
           </div>
@@ -195,7 +232,7 @@ const Index = () => {
                 attendees={activity.attendees}
                 image={activity.image}
                 className="animate-slide-up"
-                style={{ animationDelay: `${index * 0.1}s` } as React.CSSProperties}
+                style={{ animationDelay: `${index * 0.1}s` }}
               />
             ))}
           </div>
@@ -203,6 +240,17 @@ const Index = () => {
       </main>
       
       <FloatingActionButton onClick={handleFABClick} />
+
+      {/* Create Post Dialog */}
+      {user && profile && (
+        <CreatePostDialog
+          open={createPostOpen}
+          onOpenChange={setCreatePostOpen}
+          userId={user.id}
+          username={profile.username}
+          onPostCreated={refetch}
+        />
+      )}
     </div>
   );
 };
