@@ -1,20 +1,58 @@
-import { Menu } from "lucide-react";
+import { Menu, LogIn, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { Link } from "react-router-dom";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Header = () => {
+  const { isAuthenticated, profile, signOut } = useAuth();
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center justify-between">
-        <div className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2">
           <div className="relative flex items-center justify-center w-8 h-8">
             <span className="text-primary text-3xl font-bold leading-none">✚</span>
           </div>
           <span className="font-heading text-xl font-bold text-foreground">CYA</span>
-        </div>
+        </Link>
         
-        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-          <Menu className="h-5 w-5" />
-        </Button>
+        <div className="flex items-center gap-2">
+          {isAuthenticated ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+                  <User className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-card border-border">
+                <DropdownMenuItem className="text-muted-foreground">
+                  {profile?.username || "User"}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={signOut} className="text-destructive cursor-pointer">
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Link to="/auth">
+              <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/10">
+                <LogIn className="w-4 h-4 mr-2" />
+                Sign In
+              </Button>
+            </Link>
+          )}
+          
+          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+            <Menu className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
       
       {/* Decorative star background */}

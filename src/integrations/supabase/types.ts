@@ -14,7 +14,75 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      posts: {
+        Row: {
+          comments_count: number
+          created_at: string
+          description: string | null
+          hashtag: string
+          id: string
+          image_url: string | null
+          likes_count: number
+          title: string | null
+          updated_at: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          comments_count?: number
+          created_at?: string
+          description?: string | null
+          hashtag: string
+          id?: string
+          image_url?: string | null
+          likes_count?: number
+          title?: string | null
+          updated_at?: string
+          user_id: string
+          username: string
+        }
+        Update: {
+          comments_count?: number
+          created_at?: string
+          description?: string | null
+          hashtag?: string
+          id?: string
+          image_url?: string | null
+          likes_count?: number
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+          username?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+          username: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+          username?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
