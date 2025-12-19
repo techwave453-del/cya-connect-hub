@@ -1,5 +1,6 @@
 import { Heart, MessageCircle, Share2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Link } from "react-router-dom";
 import React from "react";
 
 interface PostCardProps {
@@ -12,6 +13,7 @@ interface PostCardProps {
   comments?: number;
   className?: string;
   style?: React.CSSProperties;
+  userId?: string;
 }
 
 const PostCard = ({
@@ -24,7 +26,19 @@ const PostCard = ({
   comments = 0,
   className,
   style,
+  userId,
 }: PostCardProps) => {
+  const UsernameComponent = userId ? (
+    <Link 
+      to={`/profile/${userId}`}
+      className="text-primary font-semibold text-lg hover:underline"
+    >
+      {username}
+    </Link>
+  ) : (
+    <h3 className="text-primary font-semibold text-lg">{username}</h3>
+  );
+
   return (
     <article
       style={style}
@@ -36,7 +50,7 @@ const PostCard = ({
       <div className="p-4">
         <div className="flex items-start justify-between mb-2">
           <div>
-            <h3 className="text-primary font-semibold text-lg">{username}</h3>
+            {UsernameComponent}
             <p className="text-muted-foreground text-sm">{date}</p>
           </div>
         </div>

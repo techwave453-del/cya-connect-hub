@@ -53,6 +53,7 @@ const Index = () => {
   const samplePosts = [
     {
       id: "sample-1",
+      userId: undefined as string | undefined,
       username: "dennie",
       date: "12/19/2025",
       hashtag: "Bash",
@@ -63,11 +64,12 @@ const Index = () => {
     },
     {
       id: "sample-2",
+      userId: undefined as string | undefined,
       username: "sarah_k",
       date: "12/18/2025",
       hashtag: "Worship",
-      image: undefined,
-      title: undefined,
+      image: undefined as string | undefined,
+      title: undefined as string | undefined,
       likes: 42,
       comments: 15,
     },
@@ -77,6 +79,7 @@ const Index = () => {
   const displayPosts = posts.length > 0
     ? posts.map((post) => ({
         id: post.id,
+        userId: post.user_id,
         username: post.username,
         date: format(new Date(post.created_at), "MM/dd/yyyy"),
         hashtag: post.hashtag,
@@ -176,6 +179,7 @@ const Index = () => {
                 displayPosts.map((post, index) => (
                   <PostCard
                     key={post.id}
+                    userId={post.userId}
                     username={post.username}
                     date={post.date}
                     hashtag={post.hashtag}

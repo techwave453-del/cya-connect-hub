@@ -1,0 +1,235 @@
+import { useState, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/hooks/use-toast";
+import { Camera, Loader2, User, X } from "lucide-react";
+
+interface EditProfileDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  userId: string;
+  currentUsername: string;
+  currentAvatarUrl: string | null;
+  onProfileUpdated: () => void;
+}
+
+const EditProfileDialog = ({
+  open,
+  onOpenChange,
+  userId,
+  currentUsername,
+  currentAvatarUrl,
+  onProfileUpdated,
+}: EditProfileDialogProps) => {
+  const [username, setUsername] = useState(currentUsername);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(currentAvatarUrl);
+  const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Please select an image under 2MB.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setAvatarFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!username.trim() || username.length < 2) {
+      toast({
+        title: "Invalid username",
+        description: "Username must be at least 2 characters.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      let avatarUrl = currentAvatarUrl;
+
+      // Upload new avatar if selected
+      if (avatarFile) {
+        const fileExt = avatarFile.name.split(".").pop();
+        const fileName = `${userId}/avatar.${fileExt}`;
+
+        // Delete old avatar if exists
+        if (currentAvatarUrl) {
+          const oldPath = currentAvatarUrl.split("/").pop();
+          if (oldPath) {
+            await supabase.storage.from("post-images").remove([`${userId}/${oldPath}`]);
+          }
+        }
+
+        const { error: uploadError } = await supabase.storage
+          .from("post-images")
+          .upload(fileName, avatarFile, { upsert: true });
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        const { data: urlData } = supabase.storage
+          .from("post-images")
+          .getPublicUrl(fileName);
+
+        avatarUrl = urlData.publicUrl;
+      }
+
+      // Update profile
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({
+          username: username.trim(),
+          avatar_url: avatarUrl,
+        })
+        .eq("user_id", userId);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Update username in existing posts
+      const { error: postsError } = await supabase
+        .from("posts")
+        .update({ username: username.trim() })
+        .eq("user_id", userId);
+
+      if (postsError) {
+        console.error("Failed to update posts username:", postsError);
+      }
+
+      toast({
+        title: "Profile updated!",
+        description: "Your changes have been saved.",
+      });
+
+      onOpenChange(false);
+      onProfileUpdated();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update profile.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="bg-card border-border text-foreground max-w-md">
+        <DialogHeader>
+          <DialogTitle className="font-heading text-xl">Edit Profile</DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Avatar Upload */}
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative">
+              <div className="w-24 h-24 rounded-full bg-secondary flex items-center justify-center overflow-hidden">
+                {avatarPreview ? (
+                  <img
+                    src={avatarPreview}
+                    alt="Avatar preview"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User className="w-12 h-12 text-muted-foreground" />
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute bottom-0 right-0 p-2 bg-primary rounded-full text-primary-foreground hover:bg-primary/90 transition-colors"
+              >
+                <Camera className="w-4 h-4" />
+              </button>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarSelect}
+              className="hidden"
+            />
+            <p className="text-xs text-muted-foreground">
+              Click the camera icon to change avatar
+            </p>
+          </div>
+
+          {/* Username */}
+          <div className="space-y-2">
+            <Label htmlFor="username" className="text-foreground">
+              Username
+            </Label>
+            <Input
+              id="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter username"
+              className="bg-secondary border-border text-foreground"
+              required
+              minLength={2}
+              maxLength={30}
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default EditProfileDialog;
