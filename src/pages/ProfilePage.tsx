@@ -18,17 +18,7 @@ interface Profile {
   created_at: string;
 }
 
-interface Post {
-  id: string;
-  username: string;
-  hashtag: string;
-  description: string | null;
-  image_url: string | null;
-  title: string | null;
-  likes_count: number;
-  comments_count: number;
-  created_at: string;
-}
+import { Post } from "@/hooks/usePosts";
 
 const ProfilePage = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -95,6 +85,55 @@ const ProfilePage = () => {
   };
 
   const handleProfileUpdate = () => {
+    fetchProfileAndPosts();
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    const { error } = await supabase
+      .from("posts")
+      .delete()
+      .eq("id", postId);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete the post.",
+        variant: "destructive",
+      });
+      throw error;
+    }
+
+    toast({
+      title: "Post deleted",
+      description: "Your post has been deleted successfully.",
+    });
+    
+    setPosts((prev) => prev.filter((p) => p.id !== postId));
+  };
+
+  const handleEditPost = async (
+    postId: string,
+    updates: { title?: string; description?: string; hashtag?: string }
+  ) => {
+    const { error } = await supabase
+      .from("posts")
+      .update(updates)
+      .eq("id", postId);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update the post.",
+        variant: "destructive",
+      });
+      throw error;
+    }
+
+    toast({
+      title: "Post updated",
+      description: "Your post has been updated successfully.",
+    });
+    
     fetchProfileAndPosts();
   };
 
@@ -215,13 +254,10 @@ const ProfilePage = () => {
             {posts.map((post, index) => (
               <PostCard
                 key={post.id}
-                username={post.username}
-                date={format(new Date(post.created_at), "MM/dd/yyyy")}
-                hashtag={post.hashtag}
-                image={post.image_url || undefined}
-                title={post.title || undefined}
-                likes={post.likes_count}
-                comments={post.comments_count}
+                post={post}
+                currentUserId={user?.id}
+                onDelete={isOwnProfile ? handleDeletePost : undefined}
+                onEdit={isOwnProfile ? handleEditPost : undefined}
                 className="animate-slide-up"
                 style={{ animationDelay: `${index * 0.1}s` }}
               />
