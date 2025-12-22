@@ -1,7 +1,9 @@
 import { Menu, LogIn, LogOut, User, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import { Link, useNavigate } from "react-router-dom";
+import { useMessageNotifications } from "@/hooks/useMessageNotifications";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,10 +11,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 
 const Header = () => {
   const { isAuthenticated, user, profile, signOut } = useAuth();
+  const { unreadCount, clearUnread } = useMessageNotifications(user?.id);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Clear unread count when on chat page
+  useEffect(() => {
+    if (location.pathname === "/chat") {
+      clearUnread();
+    }
+  }, [location.pathname, clearUnread]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -32,9 +44,17 @@ const Header = () => {
         <div className="flex items-center gap-2">
           {isAuthenticated && user ? (
             <>
-              <Link to="/chat">
-                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+              <Link to="/chat" onClick={clearUnread}>
+                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground relative">
                   <MessageCircle className="h-5 w-5" />
+                  {unreadCount > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                    >
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </Badge>
+                  )}
                 </Button>
               </Link>
               
