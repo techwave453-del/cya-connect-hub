@@ -20,7 +20,7 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState("posts");
   const [createPostOpen, setCreatePostOpen] = useState(false);
   const { isAuthenticated, user, profile, loading: authLoading } = useAuth();
-  const { posts, loading: postsLoading, refetch } = usePosts();
+  const { posts, loading: postsLoading, refetch, deletePost, updatePost } = usePosts();
   const navigate = useNavigate();
 
   const handleShareIdea = () => {
@@ -49,46 +49,42 @@ const Index = () => {
     setCreatePostOpen(true);
   };
 
-  // Sample posts if no database posts exist
-  const samplePosts = [
-    {
-      id: "sample-1",
-      userId: undefined as string | undefined,
-      username: "dennie",
-      date: "12/19/2025",
-      hashtag: "Bash",
-      image: bashEventImage,
-      title: "Bash",
-      likes: 24,
-      comments: 8,
-    },
-    {
-      id: "sample-2",
-      userId: undefined as string | undefined,
-      username: "sarah_k",
-      date: "12/18/2025",
-      hashtag: "Worship",
-      image: undefined as string | undefined,
-      title: undefined as string | undefined,
-      likes: 42,
-      comments: 15,
-    },
-  ];
+  const handleDeletePost = async (postId: string) => {
+    try {
+      await deletePost(postId);
+      toast({
+        title: "Post deleted",
+        description: "Your post has been deleted successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete the post. Please try again.",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
 
-  // Combine database posts with sample posts for display
-  const displayPosts = posts.length > 0
-    ? posts.map((post) => ({
-        id: post.id,
-        userId: post.user_id,
-        username: post.username,
-        date: format(new Date(post.created_at), "MM/dd/yyyy"),
-        hashtag: post.hashtag,
-        image: post.image_url || undefined,
-        title: post.title || undefined,
-        likes: post.likes_count,
-        comments: post.comments_count,
-      }))
-    : samplePosts;
+  const handleEditPost = async (
+    postId: string,
+    updates: { title?: string; description?: string; hashtag?: string }
+  ) => {
+    try {
+      await updatePost(postId, updates);
+      toast({
+        title: "Post updated",
+        description: "Your post has been updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update the post. Please try again.",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
 
   const tasks = [
     {
@@ -175,18 +171,18 @@ const Index = () => {
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="w-6 h-6 animate-spin text-primary" />
                 </div>
+              ) : posts.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No posts yet. Be the first to share an idea!</p>
+                </div>
               ) : (
-                displayPosts.map((post, index) => (
+                posts.map((post, index) => (
                   <PostCard
                     key={post.id}
-                    userId={post.userId}
-                    username={post.username}
-                    date={post.date}
-                    hashtag={post.hashtag}
-                    image={post.image}
-                    title={post.title}
-                    likes={post.likes}
-                    comments={post.comments}
+                    post={post}
+                    currentUserId={user?.id}
+                    onDelete={handleDeletePost}
+                    onEdit={handleEditPost}
                     className="animate-slide-up"
                     style={{ animationDelay: `${index * 0.1}s` }}
                   />

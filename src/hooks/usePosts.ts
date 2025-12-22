@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-interface Post {
+export interface Post {
   id: string;
   user_id: string;
   username: string;
@@ -37,6 +37,31 @@ export const usePosts = () => {
     setLoading(false);
   }, []);
 
+  const deletePost = async (postId: string) => {
+    const { error } = await supabase
+      .from("posts")
+      .delete()
+      .eq("id", postId);
+
+    if (error) {
+      throw error;
+    }
+  };
+
+  const updatePost = async (
+    postId: string,
+    updates: { title?: string; description?: string; hashtag?: string }
+  ) => {
+    const { error } = await supabase
+      .from("posts")
+      .update(updates)
+      .eq("id", postId);
+
+    if (error) {
+      throw error;
+    }
+  };
+
   useEffect(() => {
     fetchPosts();
 
@@ -61,5 +86,5 @@ export const usePosts = () => {
     };
   }, [fetchPosts]);
 
-  return { posts, loading, error, refetch: fetchPosts };
+  return { posts, loading, error, refetch: fetchPosts, deletePost, updatePost };
 };
