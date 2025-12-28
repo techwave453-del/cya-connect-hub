@@ -1,7 +1,8 @@
-import { Menu, LogIn, LogOut, User, MessageCircle } from "lucide-react";
+import { Menu, LogIn, LogOut, User, MessageCircle, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessageNotifications } from "@/hooks/useMessageNotifications";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import {
@@ -16,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 const Header = () => {
   const { isAuthenticated, user, profile, signOut } = useAuth();
   const { unreadCount, clearUnread } = useMessageNotifications(user?.id);
+  const { isSupported, isSubscribed, isLoading, subscribe, unsubscribe } = usePushNotifications(user?.id);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -91,6 +93,16 @@ const Header = () => {
                     <MessageCircle className="w-4 h-4 mr-2" />
                     Messages
                   </DropdownMenuItem>
+                  {isSupported && (
+                    <DropdownMenuItem 
+                      onClick={isSubscribed ? unsubscribe : subscribe}
+                      disabled={isLoading}
+                      className="cursor-pointer"
+                    >
+                      <Bell className="w-4 h-4 mr-2" />
+                      {isSubscribed ? "Disable Notifications" : "Enable Notifications"}
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator className="bg-border" />
                   <DropdownMenuItem onClick={handleSignOut} className="text-destructive cursor-pointer">
                     <LogOut className="w-4 h-4 mr-2" />
