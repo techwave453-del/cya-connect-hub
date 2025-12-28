@@ -107,11 +107,11 @@ export const useMessages = (conversationId: string | undefined) => {
   const sendMessage = async (content: string, senderId: string) => {
     if (!conversationId || !content.trim()) return;
 
-    const { error } = await supabase.from("messages").insert({
+    const { data, error } = await supabase.from("messages").insert({
       conversation_id: conversationId,
       sender_id: senderId,
       content: content.trim(),
-    });
+    }).select().single();
 
     if (error) {
       console.error("Error sending message:", error);
@@ -123,6 +123,20 @@ export const useMessages = (conversationId: string | undefined) => {
       .from("conversations")
       .update({ updated_at: new Date().toISOString() })
       .eq("id", conversationId);
+
+    // Trigger push notification for other participants
+    if (data) {
+      supabase.functions.invoke('notify-new-message', {
+        body: {
+          messageId: data.id,
+          conversationId: conversationId,
+          senderId: senderId,
+          content: content.trim(),
+        },
+      }).catch((err) => {
+        console.error('Error triggering push notification:', err);
+      });
+    }
   };
 
   return { messages, loading, sendMessage, refetch: fetchMessages };
