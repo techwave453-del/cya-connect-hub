@@ -256,6 +256,7 @@ const ProfilePage = () => {
                 key={post.id}
                 post={post}
                 currentUserId={user?.id}
+                currentUsername={currentUserProfile?.username}
                 onDelete={isOwnProfile ? handleDeletePost : undefined}
                 onEdit={isOwnProfile ? handleEditPost : undefined}
                 className="animate-slide-up"

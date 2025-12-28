@@ -181,6 +181,7 @@ const Index = () => {
                     key={post.id}
                     post={post}
                     currentUserId={user?.id}
+                    currentUsername={profile?.username}
                     onDelete={handleDeletePost}
                     onEdit={handleEditPost}
                     className="animate-slide-up"

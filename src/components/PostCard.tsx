@@ -21,10 +21,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Post } from "@/hooks/usePosts";
 import EditPostDialog from "./EditPostDialog";
+import CommentsDialog from "./CommentsDialog";
+import { usePostLikes } from "@/hooks/usePostLikes";
+import { toast } from "sonner";
 
 interface PostCardProps {
   post: Post;
   currentUserId?: string;
+  currentUsername?: string;
   onDelete?: (postId: string) => Promise<void>;
   onEdit?: (postId: string, updates: { title?: string; description?: string; hashtag?: string }) => Promise<void>;
   className?: string;
@@ -34,6 +38,7 @@ interface PostCardProps {
 const PostCard = ({
   post,
   currentUserId,
+  currentUsername,
   onDelete,
   onEdit,
   className,
@@ -41,9 +46,20 @@ const PostCard = ({
 }: PostCardProps) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [commentsDialogOpen, setCommentsDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  
+  const { isLiked, loading: likeLoading, toggleLike } = usePostLikes(post.id, currentUserId);
 
   const isOwner = currentUserId && post.user_id === currentUserId;
+
+  const handleLike = async () => {
+    if (!currentUserId) {
+      toast.error("Please sign in to like posts");
+      return;
+    }
+    await toggleLike();
+  };
 
   const handleDelete = async () => {
     if (!onDelete) return;
@@ -147,11 +163,21 @@ const PostCard = ({
         </div>
         
         <div className="flex items-center gap-6 px-4 py-3 border-t border-border/30">
-          <button className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
-            <Heart className="w-5 h-5" />
+          <button 
+            onClick={handleLike}
+            disabled={likeLoading}
+            className={cn(
+              "flex items-center gap-2 transition-colors",
+              isLiked ? "text-red-500" : "text-muted-foreground hover:text-primary"
+            )}
+          >
+            <Heart className={cn("w-5 h-5", isLiked && "fill-current")} />
             <span className="text-sm">{post.likes_count}</span>
           </button>
-          <button className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
+          <button 
+            onClick={() => setCommentsDialogOpen(true)}
+            className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
+          >
             <MessageCircle className="w-5 h-5" />
             <span className="text-sm">{post.comments_count}</span>
           </button>
@@ -192,6 +218,15 @@ const PostCard = ({
           onSave={onEdit}
         />
       )}
+
+      {/* Comments Dialog */}
+      <CommentsDialog
+        postId={post.id}
+        open={commentsDialogOpen}
+        onOpenChange={setCommentsDialogOpen}
+        currentUserId={currentUserId}
+        currentUsername={currentUsername}
+      />
     </>
   );
 };
