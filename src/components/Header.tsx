@@ -1,6 +1,7 @@
-import { Menu, LogIn, LogOut, User, MessageCircle, Bell } from "lucide-react";
+import { Menu, LogIn, LogOut, User, MessageCircle, Bell, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useAdmin } from "@/hooks/useAdmin";
 import { useMessageNotifications } from "@/hooks/useMessageNotifications";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { Link, useNavigate, useLocation } from "react-router-dom";
@@ -16,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 
 const Header = () => {
   const { isAuthenticated, user, profile, signOut } = useAuth();
+  const { isAdmin } = useAdmin();
   const { unreadCount, clearUnread } = useMessageNotifications(user?.id);
   const { isSupported, isSubscribed, isLoading, subscribe, unsubscribe } = usePushNotifications(user?.id);
   const navigate = useNavigate();
@@ -101,6 +103,15 @@ const Header = () => {
                     >
                       <Bell className="w-4 h-4 mr-2" />
                       {isSubscribed ? "Disable Notifications" : "Enable Notifications"}
+                    </DropdownMenuItem>
+                  )}
+                  {isAdmin && (
+                    <DropdownMenuItem 
+                      onClick={() => navigate("/admin")}
+                      className="cursor-pointer text-primary"
+                    >
+                      <Shield className="w-4 h-4 mr-2" />
+                      Admin Panel
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator className="bg-border" />

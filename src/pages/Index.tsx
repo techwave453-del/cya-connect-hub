@@ -7,6 +7,7 @@ import TaskCard from "@/components/TaskCard";
 import ActivityCard from "@/components/ActivityCard";
 import FloatingActionButton from "@/components/FloatingActionButton";
 import CreatePostDialog from "@/components/CreatePostDialog";
+import DailyBibleVerse from "@/components/DailyBibleVerse";
 import { useAuth } from "@/hooks/useAuth";
 import { usePosts } from "@/hooks/usePosts";
 import { toast } from "@/hooks/use-toast";
@@ -164,6 +165,9 @@ const Index = () => {
       <main className="pb-24">
         {activeTab === "posts" && (
           <>
+            <div className="px-4 pt-4">
+              <DailyBibleVerse />
+            </div>
             <IdeasSection onShareIdea={handleShareIdea} />
             
             <div className="px-4 py-4 space-y-4">
