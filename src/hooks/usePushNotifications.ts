@@ -2,8 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
-
 function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding)
@@ -23,12 +21,26 @@ export const usePushNotifications = (userId: string | undefined) => {
   const [isSupported, setIsSupported] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [vapidPublicKey, setVapidPublicKey] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     // Check if push notifications are supported
     const supported = 'serviceWorker' in navigator && 'PushManager' in window;
     setIsSupported(supported);
+
+    if (supported) {
+      // Fetch VAPID public key
+      supabase.functions.invoke('get-vapid-key').then(({ data, error }) => {
+        if (error) {
+          console.error('Error fetching VAPID key:', error);
+          return;
+        }
+        if (data?.publicKey) {
+          setVapidPublicKey(data.publicKey);
+        }
+      });
+    }
 
     if (supported && userId) {
       checkSubscription();
@@ -46,7 +58,7 @@ export const usePushNotifications = (userId: string | undefined) => {
   };
 
   const subscribe = useCallback(async () => {
-    if (!userId || !VAPID_PUBLIC_KEY) {
+    if (!userId || !vapidPublicKey) {
       toast({
         title: "Configuration Error",
         description: "Push notifications are not properly configured.",
@@ -75,7 +87,7 @@ export const usePushNotifications = (userId: string | undefined) => {
       // Subscribe to push notifications
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
       });
 
       const subscriptionJson = subscription.toJSON();
@@ -112,7 +124,7 @@ export const usePushNotifications = (userId: string | undefined) => {
     } finally {
       setIsLoading(false);
     }
-  }, [userId, toast]);
+  }, [userId, vapidPublicKey, toast]);
 
   const unsubscribe = useCallback(async () => {
     if (!userId) return false;
