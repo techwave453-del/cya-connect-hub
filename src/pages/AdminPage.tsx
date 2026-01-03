@@ -10,8 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useTheme, themes } from "@/contexts/ThemeContext";
-import { Shield, Users, Palette, BookOpen, Plus, Trash2, RefreshCw, ArrowLeft } from "lucide-react";
+import { useTasks, Task } from "@/hooks/useTasks";
+import { useActivities, Activity } from "@/hooks/useActivities";
+import { Shield, Users, Palette, BookOpen, Plus, Trash2, RefreshCw, ArrowLeft, ListTodo, CalendarDays, Pencil } from "lucide-react";
 import { z } from "zod";
 
 const emailSchema = z.string().email("Invalid email address");
@@ -43,6 +47,8 @@ const AdminPage = () => {
   const { isAdmin, loading: adminLoading } = useAdmin();
   const { toast } = useToast();
   const { currentTheme, setTheme } = useTheme();
+  const { tasks, fetchTasks, createTask, updateTask, deleteTask } = useTasks();
+  const { activities, fetchActivities, createActivity, updateActivity, deleteActivity } = useActivities();
 
   // User Management State
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -58,6 +64,21 @@ const AdminPage = () => {
   const [verses, setVerses] = useState<BibleVerse[]>([]);
   const [newVerseReference, setNewVerseReference] = useState("");
   const [newVerseText, setNewVerseText] = useState("");
+
+  // Task State
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskDescription, setNewTaskDescription] = useState("");
+  const [newTaskDueDate, setNewTaskDueDate] = useState("");
+  const [newTaskPriority, setNewTaskPriority] = useState<"low" | "medium" | "high">("medium");
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+
+  // Activity State
+  const [newActivityTitle, setNewActivityTitle] = useState("");
+  const [newActivityDate, setNewActivityDate] = useState("");
+  const [newActivityLocation, setNewActivityLocation] = useState("");
+  const [newActivityAttendees, setNewActivityAttendees] = useState("0");
+  const [newActivityImageUrl, setNewActivityImageUrl] = useState("");
+  const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
 
   useEffect(() => {
     if (!authLoading && !adminLoading) {
@@ -152,7 +173,6 @@ const AdminPage = () => {
 
     setLoadingAction(true);
     
-    // Note: Creating users requires service role key, so we'll use an edge function
     const { data, error } = await supabase.functions.invoke('admin-create-user', {
       body: {
         email: newUserEmail.toLowerCase().trim(),
@@ -262,6 +282,123 @@ const AdminPage = () => {
     setLoadingAction(false);
   };
 
+  // Task handlers
+  const handleAddTask = async () => {
+    if (!newTaskTitle.trim()) {
+      toast({ title: "Task title is required", variant: "destructive" });
+      return;
+    }
+
+    setLoadingAction(true);
+    try {
+      await createTask({
+        title: newTaskTitle.trim(),
+        description: newTaskDescription.trim() || null,
+        due_date: newTaskDueDate || null,
+        completed: false,
+        priority: newTaskPriority,
+      });
+      toast({ title: "Task added successfully" });
+      setNewTaskTitle("");
+      setNewTaskDescription("");
+      setNewTaskDueDate("");
+      setNewTaskPriority("medium");
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to add task", variant: "destructive" });
+    }
+    setLoadingAction(false);
+  };
+
+  const handleUpdateTask = async () => {
+    if (!editingTask) return;
+
+    setLoadingAction(true);
+    try {
+      await updateTask(editingTask.id, {
+        title: editingTask.title,
+        description: editingTask.description,
+        due_date: editingTask.due_date,
+        completed: editingTask.completed,
+        priority: editingTask.priority,
+      });
+      toast({ title: "Task updated successfully" });
+      setEditingTask(null);
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to update task", variant: "destructive" });
+    }
+    setLoadingAction(false);
+  };
+
+  const handleDeleteTask = async (id: string) => {
+    setLoadingAction(true);
+    try {
+      await deleteTask(id);
+      toast({ title: "Task deleted" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete task", variant: "destructive" });
+    }
+    setLoadingAction(false);
+  };
+
+  // Activity handlers
+  const handleAddActivity = async () => {
+    if (!newActivityTitle.trim() || !newActivityDate.trim()) {
+      toast({ title: "Title and date are required", variant: "destructive" });
+      return;
+    }
+
+    setLoadingAction(true);
+    try {
+      await createActivity({
+        title: newActivityTitle.trim(),
+        date: newActivityDate.trim(),
+        location: newActivityLocation.trim() || null,
+        attendees: parseInt(newActivityAttendees) || 0,
+        image_url: newActivityImageUrl.trim() || null,
+      });
+      toast({ title: "Activity added successfully" });
+      setNewActivityTitle("");
+      setNewActivityDate("");
+      setNewActivityLocation("");
+      setNewActivityAttendees("0");
+      setNewActivityImageUrl("");
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to add activity", variant: "destructive" });
+    }
+    setLoadingAction(false);
+  };
+
+  const handleUpdateActivity = async () => {
+    if (!editingActivity) return;
+
+    setLoadingAction(true);
+    try {
+      await updateActivity(editingActivity.id, {
+        title: editingActivity.title,
+        date: editingActivity.date,
+        location: editingActivity.location,
+        attendees: editingActivity.attendees,
+        image_url: editingActivity.image_url,
+      });
+      toast({ title: "Activity updated successfully" });
+      setEditingActivity(null);
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to update activity", variant: "destructive" });
+    }
+    setLoadingAction(false);
+  };
+
+  const handleDeleteActivity = async (id: string) => {
+    setLoadingAction(true);
+    try {
+      await deleteActivity(id);
+      toast({ title: "Activity deleted" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete activity", variant: "destructive" });
+    }
+    setLoadingAction(false);
+  };
+
   if (authLoading || adminLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -284,10 +421,18 @@ const AdminPage = () => {
         </div>
 
         <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="bg-card border border-border">
+          <TabsList className="bg-card border border-border flex-wrap h-auto gap-1 p-1">
             <TabsTrigger value="users" className="gap-2">
               <Users className="h-4 w-4" />
               Users
+            </TabsTrigger>
+            <TabsTrigger value="tasks" className="gap-2">
+              <ListTodo className="h-4 w-4" />
+              Tasks
+            </TabsTrigger>
+            <TabsTrigger value="activities" className="gap-2">
+              <CalendarDays className="h-4 w-4" />
+              Activities
             </TabsTrigger>
             <TabsTrigger value="themes" className="gap-2">
               <Palette className="h-4 w-4" />
@@ -434,6 +579,331 @@ const AdminPage = () => {
                       <span className="text-foreground">{profile.username}</span>
                     </div>
                   ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Tasks Tab */}
+          <TabsContent value="tasks" className="space-y-6">
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Plus className="h-5 w-5" />
+                  Add New Task
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Title *</Label>
+                    <Input
+                      placeholder="Task title"
+                      value={newTaskTitle}
+                      onChange={(e) => setNewTaskTitle(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Due Date</Label>
+                    <Input
+                      type="date"
+                      value={newTaskDueDate}
+                      onChange={(e) => setNewTaskDueDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Description</Label>
+                  <Textarea
+                    placeholder="Task description..."
+                    value={newTaskDescription}
+                    onChange={(e) => setNewTaskDescription(e.target.value)}
+                    rows={2}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Priority</Label>
+                  <Select value={newTaskPriority} onValueChange={(v) => setNewTaskPriority(v as "low" | "medium" | "high")}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button onClick={handleAddTask} disabled={loadingAction}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Task
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle>Tasks ({tasks.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {tasks.map((task) => (
+                    <div key={task.id} className="p-4 bg-secondary/50 rounded-lg space-y-2">
+                      {editingTask?.id === task.id ? (
+                        <div className="space-y-3">
+                          <Input
+                            value={editingTask.title}
+                            onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
+                          />
+                          <Textarea
+                            value={editingTask.description || ""}
+                            onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
+                            rows={2}
+                          />
+                          <div className="flex gap-2 items-center">
+                            <Input
+                              type="date"
+                              value={editingTask.due_date || ""}
+                              onChange={(e) => setEditingTask({ ...editingTask, due_date: e.target.value })}
+                              className="w-auto"
+                            />
+                            <Select
+                              value={editingTask.priority}
+                              onValueChange={(v) => setEditingTask({ ...editingTask, priority: v as "low" | "medium" | "high" })}
+                            >
+                              <SelectTrigger className="w-[120px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="low">Low</SelectItem>
+                                <SelectItem value="medium">Medium</SelectItem>
+                                <SelectItem value="high">High</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <div className="flex items-center gap-2">
+                              <Checkbox
+                                checked={editingTask.completed}
+                                onCheckedChange={(c) => setEditingTask({ ...editingTask, completed: !!c })}
+                              />
+                              <Label>Completed</Label>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button size="sm" onClick={handleUpdateTask} disabled={loadingAction}>
+                              Save
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => setEditingTask(null)}>
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className={`text-xs px-2 py-1 rounded ${
+                                  task.priority === 'high' ? 'bg-destructive/20 text-destructive' :
+                                  task.priority === 'medium' ? 'bg-primary/20 text-primary' :
+                                  'bg-muted text-muted-foreground'
+                                }`}>
+                                  {task.priority}
+                                </span>
+                                {task.completed && (
+                                  <span className="text-xs bg-green-500/20 text-green-500 px-2 py-1 rounded">
+                                    Completed
+                                  </span>
+                                )}
+                              </div>
+                              <h4 className="font-semibold text-foreground mt-1">{task.title}</h4>
+                              {task.description && (
+                                <p className="text-sm text-muted-foreground">{task.description}</p>
+                              )}
+                              {task.due_date && (
+                                <p className="text-xs text-muted-foreground mt-1">Due: {task.due_date}</p>
+                              )}
+                            </div>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setEditingTask(task)}
+                                disabled={loadingAction}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteTask(task.id)}
+                                disabled={loadingAction}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                  {tasks.length === 0 && (
+                    <p className="text-muted-foreground text-sm">No tasks added yet</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Activities Tab */}
+          <TabsContent value="activities" className="space-y-6">
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Plus className="h-5 w-5" />
+                  Add New Activity
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Title *</Label>
+                    <Input
+                      placeholder="Activity title"
+                      value={newActivityTitle}
+                      onChange={(e) => setNewActivityTitle(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Date *</Label>
+                    <Input
+                      placeholder="e.g., December 21, 2025 or Every Wednesday"
+                      value={newActivityDate}
+                      onChange={(e) => setNewActivityDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Location</Label>
+                    <Input
+                      placeholder="Event location"
+                      value={newActivityLocation}
+                      onChange={(e) => setNewActivityLocation(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Attendees Count</Label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={newActivityAttendees}
+                      onChange={(e) => setNewActivityAttendees(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Image URL (optional)</Label>
+                  <Input
+                    placeholder="https://..."
+                    value={newActivityImageUrl}
+                    onChange={(e) => setNewActivityImageUrl(e.target.value)}
+                  />
+                </div>
+                <Button onClick={handleAddActivity} disabled={loadingAction}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Activity
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle>Activities ({activities.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {activities.map((activity) => (
+                    <div key={activity.id} className="p-4 bg-secondary/50 rounded-lg space-y-2">
+                      {editingActivity?.id === activity.id ? (
+                        <div className="space-y-3">
+                          <Input
+                            placeholder="Title"
+                            value={editingActivity.title}
+                            onChange={(e) => setEditingActivity({ ...editingActivity, title: e.target.value })}
+                          />
+                          <Input
+                            placeholder="Date"
+                            value={editingActivity.date}
+                            onChange={(e) => setEditingActivity({ ...editingActivity, date: e.target.value })}
+                          />
+                          <Input
+                            placeholder="Location"
+                            value={editingActivity.location || ""}
+                            onChange={(e) => setEditingActivity({ ...editingActivity, location: e.target.value })}
+                          />
+                          <div className="flex gap-2">
+                            <Input
+                              type="number"
+                              placeholder="Attendees"
+                              value={editingActivity.attendees}
+                              onChange={(e) => setEditingActivity({ ...editingActivity, attendees: parseInt(e.target.value) || 0 })}
+                              className="w-[120px]"
+                            />
+                            <Input
+                              placeholder="Image URL"
+                              value={editingActivity.image_url || ""}
+                              onChange={(e) => setEditingActivity({ ...editingActivity, image_url: e.target.value })}
+                              className="flex-1"
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <Button size="sm" onClick={handleUpdateActivity} disabled={loadingAction}>
+                              Save
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => setEditingActivity(null)}>
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h4 className="font-semibold text-foreground">{activity.title}</h4>
+                              <p className="text-sm text-muted-foreground">{activity.date}</p>
+                              {activity.location && (
+                                <p className="text-sm text-muted-foreground">{activity.location}</p>
+                              )}
+                              <p className="text-xs text-muted-foreground mt-1">{activity.attendees} attending</p>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setEditingActivity(activity)}
+                                disabled={loadingAction}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteActivity(activity.id)}
+                                disabled={loadingAction}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                  {activities.length === 0 && (
+                    <p className="text-muted-foreground text-sm">No activities added yet</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
