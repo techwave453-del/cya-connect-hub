@@ -10,18 +10,20 @@ import CreatePostDialog from "@/components/CreatePostDialog";
 import DailyBibleVerse from "@/components/DailyBibleVerse";
 import { useAuth } from "@/hooks/useAuth";
 import { usePosts } from "@/hooks/usePosts";
+import { useTasks } from "@/hooks/useTasks";
+import { useActivities } from "@/hooks/useActivities";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { format } from "date-fns";
-
-import bashEventImage from "@/assets/bash-event.jpg";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("posts");
   const [createPostOpen, setCreatePostOpen] = useState(false);
   const { isAuthenticated, user, profile, loading: authLoading } = useAuth();
   const { posts, loading: postsLoading, refetch, deletePost, updatePost } = usePosts();
+  const { tasks, loading: tasksLoading } = useTasks();
+  const { activities, loading: activitiesLoading } = useActivities();
   const navigate = useNavigate();
 
   const handleShareIdea = () => {
@@ -87,57 +89,14 @@ const Index = () => {
     }
   };
 
-  const tasks = [
-    {
-      id: 1,
-      title: "Prepare Sunday worship set",
-      description: "Select songs and practice with the team",
-      dueDate: "Dec 21, 2025",
-      completed: false,
-      priority: "high" as const,
-    },
-    {
-      id: 2,
-      title: "Community outreach planning",
-      description: "Coordinate with local churches",
-      dueDate: "Dec 22, 2025",
-      completed: true,
-      priority: "medium" as const,
-    },
-    {
-      id: 3,
-      title: "Youth camp registration",
-      description: "Open registration for January camp",
-      dueDate: "Dec 25, 2025",
-      completed: false,
-      priority: "medium" as const,
-    },
-  ];
-
-  const activities = [
-    {
-      id: 1,
-      title: "CYA Bash Event",
-      date: "December 21, 2025",
-      location: "Nairobi Community Center",
-      attendees: 156,
-      image: bashEventImage,
-    },
-    {
-      id: 2,
-      title: "Weekly Bible Study",
-      date: "Every Wednesday, 6 PM",
-      location: "Online & In-Person",
-      attendees: 45,
-    },
-    {
-      id: 3,
-      title: "Community Service Day",
-      date: "December 28, 2025",
-      location: "Kibera Area",
-      attendees: 78,
-    },
-  ];
+  const formatDueDate = (dateStr: string | null) => {
+    if (!dateStr) return undefined;
+    try {
+      return format(new Date(dateStr), "MMM d, yyyy");
+    } catch {
+      return dateStr;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -205,18 +164,28 @@ const Index = () => {
                 Your Tasks
               </h2>
             </div>
-            {tasks.map((task, index) => (
-              <TaskCard
-                key={task.id}
-                title={task.title}
-                description={task.description}
-                dueDate={task.dueDate}
-                completed={task.completed}
-                priority={task.priority}
-                className="animate-slide-up"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              />
-            ))}
+            {tasksLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            ) : tasks.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>No tasks yet.</p>
+              </div>
+            ) : (
+              tasks.map((task, index) => (
+                <TaskCard
+                  key={task.id}
+                  title={task.title}
+                  description={task.description || undefined}
+                  dueDate={formatDueDate(task.due_date)}
+                  completed={task.completed}
+                  priority={task.priority}
+                  className="animate-slide-up"
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                />
+              ))
+            )}
           </div>
         )}
         
@@ -228,18 +197,28 @@ const Index = () => {
                 Upcoming Activities
               </h2>
             </div>
-            {activities.map((activity, index) => (
-              <ActivityCard
-                key={activity.id}
-                title={activity.title}
-                date={activity.date}
-                location={activity.location}
-                attendees={activity.attendees}
-                image={activity.image}
-                className="animate-slide-up"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              />
-            ))}
+            {activitiesLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            ) : activities.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>No activities yet.</p>
+              </div>
+            ) : (
+              activities.map((activity, index) => (
+                <ActivityCard
+                  key={activity.id}
+                  title={activity.title}
+                  date={activity.date}
+                  location={activity.location || undefined}
+                  attendees={activity.attendees}
+                  image={activity.image_url || undefined}
+                  className="animate-slide-up"
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                />
+              ))
+            )}
           </div>
         )}
       </main>
