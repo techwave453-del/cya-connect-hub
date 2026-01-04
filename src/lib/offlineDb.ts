@@ -1,0 +1,214 @@
+// IndexedDB wrapper for offline data storage
+const DB_NAME = 'cya-offline-db';
+const DB_VERSION = 1;
+
+interface SyncQueueItem {
+  id: string;
+  table: string;
+  action: 'insert' | 'update' | 'delete';
+  data: object;
+  timestamp: number;
+}
+
+let db: IDBDatabase | null = null;
+
+const openDB = (): Promise<IDBDatabase> => {
+  return new Promise((resolve, reject) => {
+    if (db) {
+      resolve(db);
+      return;
+    }
+
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      db = request.result;
+      resolve(db);
+    };
+
+    request.onupgradeneeded = (event) => {
+      const database = (event.target as IDBOpenDBRequest).result;
+
+      // Store for posts
+      if (!database.objectStoreNames.contains('posts')) {
+        database.createObjectStore('posts', { keyPath: 'id' });
+      }
+
+      // Store for tasks
+      if (!database.objectStoreNames.contains('tasks')) {
+        database.createObjectStore('tasks', { keyPath: 'id' });
+      }
+
+      // Store for activities
+      if (!database.objectStoreNames.contains('activities')) {
+        database.createObjectStore('activities', { keyPath: 'id' });
+      }
+
+      // Store for bible_verses
+      if (!database.objectStoreNames.contains('bible_verses')) {
+        database.createObjectStore('bible_verses', { keyPath: 'id' });
+      }
+
+      // Store for profiles
+      if (!database.objectStoreNames.contains('profiles')) {
+        database.createObjectStore('profiles', { keyPath: 'id' });
+      }
+
+      // Store for auth session
+      if (!database.objectStoreNames.contains('auth_session')) {
+        database.createObjectStore('auth_session', { keyPath: 'id' });
+      }
+
+      // Store for sync queue (offline changes to sync later)
+      if (!database.objectStoreNames.contains('sync_queue')) {
+        const syncStore = database.createObjectStore('sync_queue', { keyPath: 'id' });
+        syncStore.createIndex('timestamp', 'timestamp', { unique: false });
+      }
+
+      // Store for metadata (last sync time, etc.)
+      if (!database.objectStoreNames.contains('metadata')) {
+        database.createObjectStore('metadata', { keyPath: 'key' });
+      }
+    };
+  });
+};
+
+export const getAll = async <T>(storeName: string): Promise<T[]> => {
+  const database = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(storeName, 'readonly');
+    const store = transaction.objectStore(storeName);
+    const request = store.getAll();
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result as T[]);
+  });
+};
+
+export const getById = async <T>(storeName: string, id: string): Promise<T | undefined> => {
+  const database = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(storeName, 'readonly');
+    const store = transaction.objectStore(storeName);
+    const request = store.get(id);
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result as T | undefined);
+  });
+};
+
+export const put = async <T extends { id: string }>(storeName: string, data: T): Promise<void> => {
+  const database = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(storeName, 'readwrite');
+    const store = transaction.objectStore(storeName);
+    const request = store.put(data);
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve();
+  });
+};
+
+export const putAll = async <T extends { id: string }>(storeName: string, items: T[]): Promise<void> => {
+  const database = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(storeName, 'readwrite');
+    const store = transaction.objectStore(storeName);
+
+    items.forEach(item => store.put(item));
+
+    transaction.onerror = () => reject(transaction.error);
+    transaction.oncomplete = () => resolve();
+  });
+};
+
+export const remove = async (storeName: string, id: string): Promise<void> => {
+  const database = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(storeName, 'readwrite');
+    const store = transaction.objectStore(storeName);
+    const request = store.delete(id);
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve();
+  });
+};
+
+export const clearStore = async (storeName: string): Promise<void> => {
+  const database = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(storeName, 'readwrite');
+    const store = transaction.objectStore(storeName);
+    const request = store.clear();
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve();
+  });
+};
+
+// Sync queue operations
+export const addToSyncQueue = async (item: { table: string; action: 'insert' | 'update' | 'delete'; data: object }): Promise<void> => {
+  const database = await openDB();
+  const syncItem: SyncQueueItem = {
+    id: crypto.randomUUID(),
+    table: item.table,
+    action: item.action,
+    data: item.data,
+    timestamp: Date.now(),
+  };
+  
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction('sync_queue', 'readwrite');
+    const store = transaction.objectStore('sync_queue');
+    const request = store.put(syncItem);
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve();
+  });
+};
+
+export const getSyncQueue = async (): Promise<SyncQueueItem[]> => {
+  return getAll<SyncQueueItem>('sync_queue');
+};
+
+export const clearSyncQueue = async (): Promise<void> => {
+  await clearStore('sync_queue');
+};
+
+export const removeSyncQueueItem = async (id: string): Promise<void> => {
+  await remove('sync_queue', id);
+};
+
+// Metadata operations
+export const getMetadata = async (key: string): Promise<unknown | undefined> => {
+  const result = await getById<{ key: string; value: unknown }>('metadata', key);
+  return result?.value;
+};
+
+export const setMetadata = async (key: string, value: unknown): Promise<void> => {
+  const database = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction('metadata', 'readwrite');
+    const store = transaction.objectStore('metadata');
+    const request = store.put({ key, value });
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve();
+  });
+};
+
+// Auth session operations
+export const saveAuthSession = async (session: { id: string; user: unknown; access_token: string; refresh_token: string; expires_at: number }): Promise<void> => {
+  await clearStore('auth_session');
+  await put('auth_session', session);
+};
+
+export const getAuthSession = async (): Promise<{ id: string; user: unknown; access_token: string; refresh_token: string; expires_at: number } | undefined> => {
+  const sessions = await getAll<{ id: string; user: unknown; access_token: string; refresh_token: string; expires_at: number }>('auth_session');
+  return sessions[0];
+};
+
+export const clearAuthSession = async (): Promise<void> => {
+  await clearStore('auth_session');
+};

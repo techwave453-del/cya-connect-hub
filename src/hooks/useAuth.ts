@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { saveAuthSession, getAuthSession, clearAuthSession, put, getById } from "@/lib/offlineDb";
 
 interface Profile {
   id: string;
@@ -14,48 +15,105 @@ export const useAuth = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    const initAuth = async () => {
+      if (isOnline) {
+        // Set up auth state listener FIRST
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            setSession(session);
+            setUser(session?.user ?? null);
+            
+            if (session?.user) {
+              // Cache session for offline use
+              await saveAuthSession({
+                id: 'current',
+                user: session.user,
+                access_token: session.access_token,
+                refresh_token: session.refresh_token,
+                expires_at: session.expires_at || 0,
+              });
+              
+              // Defer profile fetch
+              setTimeout(() => {
+                fetchProfile(session.user.id);
+              }, 0);
+            } else {
+              setProfile(null);
+              await clearAuthSession();
+            }
+          }
+        );
+
+        // THEN check for existing session
+        const { data: { session } } = await supabase.auth.getSession();
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Defer profile fetch
         if (session?.user) {
-          setTimeout(() => {
-            fetchProfile(session.user.id);
-          }, 0);
-        } else {
-          setProfile(null);
+          await fetchProfile(session.user.id);
         }
-      }
-    );
+        
+        setLoading(false);
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        fetchProfile(session.user.id);
+        return () => subscription.unsubscribe();
+      } else {
+        // Offline - try to restore from cache
+        try {
+          const cachedSession = await getAuthSession();
+          if (cachedSession && cachedSession.expires_at * 1000 > Date.now()) {
+            setUser(cachedSession.user as User);
+            // Try to get cached profile
+            const cachedProfile = await getById<Profile>('profiles', 'current');
+            if (cachedProfile) {
+              setProfile(cachedProfile);
+            }
+          }
+        } catch (e) {
+          console.log("Failed to restore offline session:", e);
+        }
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    };
 
-    return () => subscription.unsubscribe();
-  }, []);
+    initAuth();
+  }, [isOnline]);
 
   const fetchProfile = async (userId: string) => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle();
+    try {
+      if (isOnline) {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("user_id", userId)
+          .maybeSingle();
 
-    if (!error && data) {
-      setProfile(data);
+        if (!error && data) {
+          setProfile(data);
+          // Cache profile for offline use
+          await put('profiles', { ...data, id: 'current' });
+        }
+      } else {
+        const cachedProfile = await getById<Profile>('profiles', 'current');
+        if (cachedProfile) {
+          setProfile(cachedProfile);
+        }
+      }
+    } catch (e) {
+      console.error("Error fetching profile:", e);
     }
   };
 
@@ -64,6 +122,7 @@ export const useAuth = () => {
     setUser(null);
     setSession(null);
     setProfile(null);
+    await clearAuthSession();
   };
 
   return {
@@ -72,6 +131,6 @@ export const useAuth = () => {
     profile,
     loading,
     signOut,
-    isAuthenticated: !!session,
+    isAuthenticated: !!session || !!user,
   };
 };
