@@ -218,6 +218,28 @@ const AdminPage = () => {
     setLoadingAction(false);
   };
 
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      return;
+    }
+
+    setLoadingAction(true);
+    
+    const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+      body: { userId }
+    });
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else if (data?.error) {
+      toast({ title: "Error", description: data.error, variant: "destructive" });
+    } else {
+      toast({ title: "User deleted successfully" });
+      fetchData();
+    }
+    setLoadingAction(false);
+  };
+
   const handleThemeChange = async (theme: typeof themes[0]) => {
     setLoadingAction(true);
     
@@ -564,21 +586,43 @@ const AdminPage = () => {
             <Card className="bg-card border-border">
               <CardHeader>
                 <CardTitle>Registered Users ({profiles.length})</CardTitle>
+                <CardDescription>Manage all registered users. Deleting a user will permanently remove their account and all associated data.</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   {profiles.map((profile) => (
-                    <div key={profile.id} className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg">
-                      {profile.avatar_url ? (
-                        <img src={profile.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                          <Users className="h-4 w-4 text-primary" />
+                    <div key={profile.id} className="flex items-center justify-between gap-3 p-3 bg-secondary/50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        {profile.avatar_url ? (
+                          <img src={profile.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                            <Users className="h-4 w-4 text-primary" />
+                          </div>
+                        )}
+                        <div>
+                          <span className="text-foreground font-medium">{profile.username}</span>
+                          {profile.user_id === user?.id && (
+                            <span className="ml-2 text-xs text-muted-foreground">(You)</span>
+                          )}
                         </div>
+                      </div>
+                      {profile.user_id !== user?.id && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteUser(profile.user_id)}
+                          disabled={loadingAction}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       )}
-                      <span className="text-foreground">{profile.username}</span>
                     </div>
                   ))}
+                  {profiles.length === 0 && (
+                    <p className="text-muted-foreground text-sm">No users registered</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
