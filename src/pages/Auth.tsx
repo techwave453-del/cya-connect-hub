@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, WifiOff, Home } from "lucide-react";
 import { z } from "zod";
+import { getAuthSession } from "@/lib/offlineDb";
+import { Link } from "react-router-dom";
 
 const authSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -21,9 +23,37 @@ const Auth = () => {
   const [username, setUsername] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [hasOfflineSession, setHasOfflineSession] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    const checkOfflineSession = async () => {
+      const session = await getAuthSession();
+      if (session && session.expires_at * 1000 > Date.now()) {
+        setHasOfflineSession(true);
+      }
+    };
+    
+    if (!isOnline) {
+      checkOfflineSession();
+    }
+  }, [isOnline]);
+
+  useEffect(() => {
+    if (!isOnline) return;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (session?.user) {
@@ -39,7 +69,7 @@ const Auth = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, isOnline]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,6 +155,56 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  // Offline view with cached session
+  if (!isOnline && hasOfflineSession) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-md space-y-8 text-center">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <span className="text-primary text-4xl font-bold">✚</span>
+            <span className="font-heading text-3xl font-bold text-foreground">CYA</span>
+          </div>
+          
+          <div className="bg-secondary rounded-lg p-6 space-y-4">
+            <WifiOff className="w-12 h-12 text-muted-foreground mx-auto" />
+            <h2 className="font-heading text-xl font-bold text-foreground">You're Offline</h2>
+            <p className="text-muted-foreground">
+              You have a cached session. You can continue using the app in offline mode.
+            </p>
+            <Link to="/">
+              <Button className="w-full bg-primary text-primary-foreground">
+                <Home className="w-4 h-4 mr-2" />
+                Continue to App
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Offline view without session
+  if (!isOnline) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-md space-y-8 text-center">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <span className="text-primary text-4xl font-bold">✚</span>
+            <span className="font-heading text-3xl font-bold text-foreground">CYA</span>
+          </div>
+          
+          <div className="bg-secondary rounded-lg p-6 space-y-4">
+            <WifiOff className="w-12 h-12 text-muted-foreground mx-auto" />
+            <h2 className="font-heading text-xl font-bold text-foreground">You're Offline</h2>
+            <p className="text-muted-foreground">
+              Please connect to the internet to sign in or create an account.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
