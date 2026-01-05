@@ -16,6 +16,16 @@ import { useTheme, themes } from "@/contexts/ThemeContext";
 import { useTasks, Task } from "@/hooks/useTasks";
 import { useActivities, Activity } from "@/hooks/useActivities";
 import { Shield, Users, Palette, BookOpen, Plus, Trash2, RefreshCw, ArrowLeft, ListTodo, CalendarDays, Pencil } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { z } from "zod";
 
 const emailSchema = z.string().email("Invalid email address");
@@ -79,6 +89,9 @@ const AdminPage = () => {
   const [newActivityAttendees, setNewActivityAttendees] = useState("0");
   const [newActivityImageUrl, setNewActivityImageUrl] = useState("");
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
+
+  // Delete User Dialog State
+  const [userToDelete, setUserToDelete] = useState<Profile | null>(null);
 
   useEffect(() => {
     if (!authLoading && !adminLoading) {
@@ -218,15 +231,13 @@ const AdminPage = () => {
     setLoadingAction(false);
   };
 
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-      return;
-    }
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
 
     setLoadingAction(true);
     
     const { data, error } = await supabase.functions.invoke('admin-delete-user', {
-      body: { userId }
+      body: { userId: userToDelete.user_id }
     });
 
     if (error) {
@@ -237,6 +248,7 @@ const AdminPage = () => {
       toast({ title: "User deleted successfully" });
       fetchData();
     }
+    setUserToDelete(null);
     setLoadingAction(false);
   };
 
@@ -611,7 +623,7 @@ const AdminPage = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleDeleteUser(profile.user_id)}
+                          onClick={() => setUserToDelete(profile)}
                           disabled={loadingAction}
                           className="text-destructive hover:text-destructive hover:bg-destructive/10"
                         >
@@ -1065,6 +1077,28 @@ const AdminPage = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Delete User Confirmation Dialog */}
+      <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <span className="font-semibold text-foreground">{userToDelete?.username}</span>? This action cannot be undone and will permanently remove their account and all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={loadingAction}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteUser}
+              disabled={loadingAction}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {loadingAction ? "Deleting..." : "Delete User"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
