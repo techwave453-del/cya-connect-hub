@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { ImagePlus, X, Loader2, Hash } from "lucide-react";
+import { ImagePlus, X, Loader2, Hash, WifiOff } from "lucide-react";
+import { put, addToSyncQueue } from "@/lib/offlineDb";
 
 interface CreatePostDialogProps {
   open: boolean;
@@ -19,6 +20,7 @@ interface CreatePostDialogProps {
   userId: string;
   username: string;
   onPostCreated: () => void;
+  isOnline?: boolean;
 }
 
 const CreatePostDialog = ({
@@ -27,6 +29,7 @@ const CreatePostDialog = ({
   userId,
   username,
   onPostCreated,
+  isOnline = navigator.onLine,
 }: CreatePostDialogProps) => {
   const [hashtag, setHashtag] = useState("");
   const [description, setDescription] = useState("");
@@ -81,44 +84,83 @@ const CreatePostDialog = ({
 
     try {
       let imageUrl: string | null = null;
+      let imageDataUrl: string | null = null;
 
       // Upload image if present
       if (imageFile) {
-        const fileExt = imageFile.name.split(".").pop();
-        const fileName = `${userId}/${Date.now()}.${fileExt}`;
+        if (isOnline) {
+          const fileExt = imageFile.name.split(".").pop();
+          const fileName = `${userId}/${Date.now()}.${fileExt}`;
 
-        const { error: uploadError } = await supabase.storage
-          .from("post-images")
-          .upload(fileName, imageFile);
+          const { error: uploadError } = await supabase.storage
+            .from("post-images")
+            .upload(fileName, imageFile);
 
-        if (uploadError) {
-          throw uploadError;
+          if (uploadError) {
+            throw uploadError;
+          }
+
+          const { data: urlData } = supabase.storage
+            .from("post-images")
+            .getPublicUrl(fileName);
+
+          imageUrl = urlData.publicUrl;
+        } else {
+          // Store image as data URL for offline
+          imageDataUrl = imagePreview;
         }
-
-        const { data: urlData } = supabase.storage
-          .from("post-images")
-          .getPublicUrl(fileName);
-
-        imageUrl = urlData.publicUrl;
       }
 
-      // Create post
-      const { error: postError } = await supabase.from("posts").insert({
+      const postId = crypto.randomUUID();
+      const postData = {
+        id: postId,
         user_id: userId,
         username: username,
         hashtag: hashtag.replace(/^#/, ""),
         description: description || null,
         title: title || null,
-        image_url: imageUrl,
-      });
+        image_url: imageUrl || imageDataUrl,
+        likes_count: 0,
+        comments_count: 0,
+        created_at: new Date().toISOString(),
+      };
 
-      if (postError) {
-        throw postError;
+      if (isOnline) {
+        // Create post online
+        const { error: postError } = await supabase.from("posts").insert({
+          user_id: userId,
+          username: username,
+          hashtag: hashtag.replace(/^#/, ""),
+          description: description || null,
+          title: title || null,
+          image_url: imageUrl,
+        });
+
+        if (postError) {
+          throw postError;
+        }
+      } else {
+        // Save to IndexedDB and queue for sync
+        await put('posts', postData);
+        await addToSyncQueue({
+          table: 'posts',
+          action: 'insert',
+          data: {
+            user_id: userId,
+            username: username,
+            hashtag: hashtag.replace(/^#/, ""),
+            description: description || null,
+            title: title || null,
+            image_url: null, // Will need to upload image when online
+          }
+        });
       }
 
       toast({
-        title: "Post created!",
-        description: "Your post has been shared with the community.",
+        title: isOnline ? "Post created!" : "Post saved offline",
+        description: isOnline 
+          ? "Your post has been shared with the community."
+          : "Your post will be synced when you're back online.",
       });
 
       // Reset form
@@ -143,7 +185,14 @@ const CreatePostDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-card border-border text-foreground max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-heading text-xl">Create Post</DialogTitle>
+          <DialogTitle className="font-heading text-xl flex items-center gap-2">
+            Create Post
+            {!isOnline && (
+              <span className="inline-flex items-center gap-1 text-xs font-normal text-muted-foreground bg-secondary px-2 py-0.5 rounded">
+                <WifiOff className="h-3 w-3" /> Offline
+              </span>
+            )}
+          </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -195,7 +244,14 @@ const CreatePostDialog = ({
 
           {/* Image Upload */}
           <div className="space-y-2">
-            <Label className="text-foreground">Image (optional)</Label>
+            <Label className="text-foreground">
+              Image (optional)
+              {!isOnline && imageFile && (
+                <span className="text-xs text-muted-foreground ml-2">
+                  (Will be uploaded when online)
+                </span>
+              )}
+            </Label>
             
             {imagePreview ? (
               <div className="relative rounded-lg overflow-hidden">
@@ -241,10 +297,10 @@ const CreatePostDialog = ({
             {loading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Posting...
+                {isOnline ? "Posting..." : "Saving..."}
               </>
             ) : (
-              "Share Post"
+              <>{isOnline ? "Share Post" : "Save Post (Offline)"}</>
             )}
           </Button>
         </form>

@@ -21,7 +21,7 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState("posts");
   const [createPostOpen, setCreatePostOpen] = useState(false);
   const { isAuthenticated, user, profile, loading: authLoading } = useAuth();
-  const { posts, loading: postsLoading, refetch, deletePost, updatePost } = usePosts();
+  const { posts, loading: postsLoading, refetch, deletePost, updatePost, isOnline } = usePosts();
   const { tasks, loading: tasksLoading } = useTasks();
   const { activities, loading: activitiesLoading } = useActivities();
   const navigate = useNavigate();
@@ -233,6 +233,7 @@ const Index = () => {
           userId={user.id}
           username={profile.username}
           onPostCreated={refetch}
+          isOnline={isOnline}
         />
       )}
     </div>

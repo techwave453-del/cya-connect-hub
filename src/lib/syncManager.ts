@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getSyncQueue, removeSyncQueueItem, setMetadata, getMetadata } from "./offlineDb";
 
-type TableName = 'posts' | 'post_comments' | 'post_likes';
+type TableName = 'posts' | 'post_comments' | 'post_likes' | 'tasks' | 'activities';
 
 let isSyncing = false;
 

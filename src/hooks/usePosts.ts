@@ -175,5 +175,45 @@ export const usePosts = () => {
     return () => window.removeEventListener('sync-complete', handleSyncComplete);
   }, [fetchPosts, isOnline]);
 
-  return { posts, loading, error, refetch: fetchPosts, deletePost, updatePost };
+  const createPost = async (post: Omit<Post, 'id' | 'created_at' | 'likes_count' | 'comments_count'>) => {
+    const newPost: Post = {
+      ...post,
+      id: crypto.randomUUID(),
+      created_at: new Date().toISOString(),
+      likes_count: 0,
+      comments_count: 0,
+    };
+
+    // Update local state immediately
+    setPosts(prev => [newPost, ...prev]);
+    await put(STORE_NAME, newPost);
+
+    if (isOnline) {
+      const { error } = await supabase
+        .from("posts")
+        .insert({
+          user_id: post.user_id,
+          username: post.username,
+          hashtag: post.hashtag,
+          description: post.description,
+          title: post.title,
+          image_url: post.image_url,
+        });
+
+      if (error) {
+        throw error;
+      }
+      // Refetch to get server-generated ID
+      await fetchPosts();
+    } else {
+      // Queue for sync
+      await addToSyncQueue({
+        table: 'posts',
+        action: 'insert',
+        data: newPost
+      });
+    }
+  };
+
+  return { posts, loading, error, refetch: fetchPosts, deletePost, updatePost, createPost, isOnline };
 };
