@@ -69,6 +69,7 @@ const ChatPage = () => {
               <ChatView
                 conversation={selectedConversation}
                 currentUserId={user.id}
+                onConversationUpdate={refetch}
               />
             </div>
           </div>
@@ -154,6 +155,7 @@ const ChatPage = () => {
             <ChatView
               conversation={selectedConversation}
               currentUserId={user.id}
+              onConversationUpdate={refetch}
             />
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
