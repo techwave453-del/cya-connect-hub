@@ -63,7 +63,7 @@ export const useMessages = (conversationId: string | undefined) => {
     fetchMessages();
   }, [conversationId]);
 
-  // Subscribe to real-time messages
+  // Subscribe to real-time messages (INSERT and DELETE)
   useEffect(() => {
     if (!conversationId) return;
 
@@ -95,6 +95,19 @@ export const useMessages = (conversationId: string | undefined) => {
           };
 
           setMessages((prev) => [...prev, messageWithSender]);
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const deletedMessage = payload.old as { id: string };
+          setMessages((prev) => prev.filter((m) => m.id !== deletedMessage.id));
         }
       )
       .subscribe();
