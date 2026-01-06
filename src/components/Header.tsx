@@ -1,11 +1,11 @@
-import { Menu, LogIn, LogOut, User, MessageCircle, Bell, Shield } from "lucide-react";
+import { Menu, LogIn, LogOut, User, MessageCircle, Bell, Shield, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useMessageNotifications } from "@/hooks/useMessageNotifications";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +15,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
+
 const Header = () => {
   const { isAuthenticated, user, profile, signOut } = useAuth();
   const { isAdmin } = useAdmin();
@@ -22,6 +27,27 @@ const Header = () => {
   const { isSupported, isSubscribed, isLoading, subscribe, unsubscribe } = usePushNotifications(user?.id);
   const navigate = useNavigate();
   const location = useLocation();
+  
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+
+  // Check if app is installed and listen for install prompt
+  useEffect(() => {
+    if (window.matchMedia("(display-mode: standalone)").matches) {
+      setIsInstalled(true);
+    }
+
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstall);
+    
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
+    };
+  }, []);
 
   // Clear unread count when on chat page
   useEffect(() => {
@@ -33,6 +59,20 @@ const Header = () => {
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
+  };
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === "accepted") {
+        setIsInstalled(true);
+      }
+      setDeferredPrompt(null);
+    } else {
+      // Fallback to install page for iOS or when prompt isn't available
+      navigate("/install");
+    }
   };
 
   return (
@@ -131,9 +171,17 @@ const Header = () => {
             </Link>
           )}
           
-          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-            <Menu className="h-5 w-5" />
-          </Button>
+          {!isInstalled && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="text-muted-foreground hover:text-foreground"
+              onClick={handleInstallClick}
+              title="Install App"
+            >
+              <Download className="h-5 w-5" />
+            </Button>
+          )}
         </div>
       </div>
       
