@@ -77,15 +77,30 @@ serve(async (req) => {
 
     console.log('Attempting to delete user:', userId);
 
-    // Delete the user using admin API
+    // First, try to delete the user from auth.users
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
 
     if (deleteError) {
-      console.error('Error deleting user:', deleteError);
-      return new Response(JSON.stringify({ error: deleteError.message }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      // If user not found in auth, it might already be deleted - continue to clean up profile
+      if (deleteError.message.includes('User not found') || (deleteError as any).code === 'user_not_found') {
+        console.log('User not found in auth.users, cleaning up profile data:', userId);
+      } else {
+        console.error('Error deleting user:', deleteError);
+        return new Response(JSON.stringify({ error: deleteError.message }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    // Clean up the profile record if it exists
+    const { error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .delete()
+      .eq('user_id', userId);
+
+    if (profileError) {
+      console.log('Note: Could not delete profile (may not exist):', profileError.message);
     }
 
     console.log('User deleted successfully:', userId);
