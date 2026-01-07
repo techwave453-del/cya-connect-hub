@@ -15,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useTheme, themes } from "@/contexts/ThemeContext";
 import { useTasks, Task } from "@/hooks/useTasks";
 import { useActivities, Activity } from "@/hooks/useActivities";
-import { Shield, Users, Palette, BookOpen, Plus, Trash2, RefreshCw, ArrowLeft, ListTodo, CalendarDays, Pencil } from "lucide-react";
+import { Shield, Users, Palette, BookOpen, Plus, Trash2, RefreshCw, ArrowLeft, ListTodo, CalendarDays, Pencil, Gamepad2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +27,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { z } from "zod";
+import AdminGameManagement from "@/components/games/AdminGameManagement";
 
 const emailSchema = z.string().email("Invalid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
@@ -475,6 +476,10 @@ const AdminPage = () => {
             <TabsTrigger value="verses" className="gap-2">
               <BookOpen className="h-4 w-4" />
               Bible Verses
+            </TabsTrigger>
+            <TabsTrigger value="games" className="gap-2">
+              <Gamepad2 className="h-4 w-4" />
+              Games
             </TabsTrigger>
           </TabsList>
 
@@ -1072,6 +1077,21 @@ const AdminPage = () => {
                     <p className="text-muted-foreground text-sm">No verses added yet</p>
                   )}
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="games" className="space-y-6">
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Gamepad2 className="h-5 w-5" />
+                  Manage Bible Games
+                </CardTitle>
+                <CardDescription>Add, edit, or remove Bible trivia questions and other games</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AdminGameManagement />
               </CardContent>
             </Card>
           </TabsContent>

@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import ProfilePage from "./pages/ProfilePage";
 import ChatPage from "./pages/ChatPage";
 import AdminPage from "./pages/AdminPage";
+import GamesPage from "./pages/GamesPage";
 import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
 import OfflineIndicator from "@/components/OfflineIndicator";
@@ -31,6 +32,7 @@ const App = () => (
               <Route path="/profile/:userId" element={<ProfilePage />} />
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/admin" element={<AdminPage />} />
+              <Route path="/games" element={<GamesPage />} />
               <Route path="/install" element={<Install />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
