@@ -89,6 +89,51 @@ export type Database = {
         }
         Relationships: []
       }
+      bible_games: {
+        Row: {
+          bible_reference: string | null
+          correct_answer: string
+          created_at: string
+          difficulty: string
+          game_type: string
+          hint: string | null
+          id: string
+          is_active: boolean
+          options: Json | null
+          points: number
+          question: string
+          updated_at: string
+        }
+        Insert: {
+          bible_reference?: string | null
+          correct_answer: string
+          created_at?: string
+          difficulty?: string
+          game_type: string
+          hint?: string | null
+          id?: string
+          is_active?: boolean
+          options?: Json | null
+          points?: number
+          question: string
+          updated_at?: string
+        }
+        Update: {
+          bible_reference?: string | null
+          correct_answer?: string
+          created_at?: string
+          difficulty?: string
+          game_type?: string
+          hint?: string | null
+          id?: string
+          is_active?: boolean
+          options?: Json | null
+          points?: number
+          question?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       bible_verses: {
         Row: {
           created_at: string
@@ -166,6 +211,39 @@ export type Database = {
           is_group?: boolean
           name?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      game_scores: {
+        Row: {
+          created_at: string
+          game_type: string
+          games_played: number
+          highest_streak: number
+          id: string
+          score: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          game_type: string
+          games_played?: number
+          highest_streak?: number
+          id?: string
+          score?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          game_type?: string
+          games_played?: number
+          highest_streak?: number
+          id?: string
+          score?: number
+          updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
