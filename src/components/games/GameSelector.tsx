@@ -27,7 +27,7 @@ const games: Game[] = [
     title: 'Guess the Character',
     description: 'Identify biblical figures from clues',
     icon: <User className="w-8 h-8" />,
-    available: false,
+    available: true,
     color: 'from-purple-500/20 to-purple-600/10'
   },
   {
