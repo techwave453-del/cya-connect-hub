@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
 import GameSelector from "@/components/games/GameSelector";
 import BibleTrivia from "@/components/games/BibleTrivia";
+import GuessCharacter from "@/components/games/GuessCharacter";
 import FloatingLeaderboard from "@/components/games/FloatingLeaderboard";
 import { useOffline } from "@/contexts/OfflineContext";
 
@@ -31,7 +32,8 @@ const GamesPage = () => {
     switch (selectedGame) {
       case 'trivia':
         return <BibleTrivia onGameEnd={() => {}} />;
-      // Future games will be added here
+      case 'guess_character':
+        return <GuessCharacter onGameEnd={() => {}} />;
       default:
         return null;
     }
