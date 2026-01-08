@@ -6,10 +6,11 @@ import Header from "@/components/Header";
 import GameSelector from "@/components/games/GameSelector";
 import BibleTrivia from "@/components/games/BibleTrivia";
 import GuessCharacter from "@/components/games/GuessCharacter";
+import DailyChallenge from "@/components/games/DailyChallenge";
 import FloatingLeaderboard from "@/components/games/FloatingLeaderboard";
 import { useOffline } from "@/contexts/OfflineContext";
 
-type GameType = 'trivia' | 'guess_character' | 'fill_blank' | 'memory_verse';
+type GameType = 'trivia' | 'guess_character' | 'fill_blank' | 'memory_verse' | 'daily_challenge';
 
 const GamesPage = () => {
   const [selectedGame, setSelectedGame] = useState<GameType | null>(null);
@@ -34,6 +35,8 @@ const GamesPage = () => {
         return <BibleTrivia onGameEnd={() => {}} />;
       case 'guess_character':
         return <GuessCharacter onGameEnd={() => {}} />;
+      case 'daily_challenge':
+        return <DailyChallenge onGameEnd={() => {}} />;
       default:
         return null;
     }
