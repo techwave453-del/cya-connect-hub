@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Send, Users, User, Settings, Trash2, Smile } from "lucide-react";
-import EmojiPicker, { EmojiClickData, Theme } from "emoji-picker-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -28,6 +27,8 @@ import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import GroupManagementDialog from "./GroupManagementDialog";
+
+const EMOJI_LIST = ["😀", "😂", "😍", "🥰", "😊", "🙏", "❤️", "🔥", "👍", "👏", "🎉", "✨", "💯", "🙌", "😇", "🤗"];
 
 interface ChatViewProps {
   conversation: Conversation;
@@ -117,8 +118,8 @@ const ChatView = ({ conversation, currentUserId, onConversationUpdate }: ChatVie
     }
   };
 
-  const handleEmojiClick = (emojiData: EmojiClickData) => {
-    setNewMessage((prev) => prev + emojiData.emoji);
+  const handleEmojiClick = (emoji: string) => {
+    setNewMessage((prev) => prev + emoji);
     setShowEmojiPicker(false);
   };
 
@@ -309,13 +310,18 @@ const ChatView = ({ conversation, currentUserId, onConversationUpdate }: ChatVie
                 <Smile className="h-5 w-5" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-full p-0 border-none" side="top" align="start">
-              <EmojiPicker
-                onEmojiClick={handleEmojiClick}
-                theme={Theme.AUTO}
-                width="100%"
-                height={350}
-              />
+            <PopoverContent className="w-auto p-2" side="top" align="start">
+              <div className="grid grid-cols-8 gap-1">
+                {EMOJI_LIST.map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => handleEmojiClick(emoji)}
+                    className="text-xl p-1 hover:bg-muted rounded transition-colors"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
             </PopoverContent>
           </Popover>
           <Input
