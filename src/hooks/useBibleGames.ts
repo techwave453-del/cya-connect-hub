@@ -189,8 +189,20 @@ export const useBibleGames = (gameType?: string) => {
   };
 };
 
+export interface AggregatedScore {
+  user_id: string;
+  total_score: number;
+  total_games_played: number;
+  highest_streak: number;
+  games: { game_type: string; score: number; games_played: number }[];
+  profiles?: {
+    username: string;
+    avatar_url: string | null;
+  };
+}
+
 export const useLeaderboard = (gameType?: string) => {
-  const [scores, setScores] = useState<GameScore[]>([]);
+  const [scores, setScores] = useState<AggregatedScore[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
@@ -218,8 +230,7 @@ export const useLeaderboard = (gameType?: string) => {
       let query = supabase
         .from('game_scores')
         .select('*')
-        .order('score', { ascending: false })
-        .limit(10);
+        .order('score', { ascending: false });
       
       if (gameType) {
         query = query.eq('game_type', gameType);
@@ -230,19 +241,59 @@ export const useLeaderboard = (gameType?: string) => {
       if (error) throw error;
       
       if (data) {
-        // Fetch profiles separately
-        const userIds = data.map(s => s.user_id);
+        // Aggregate scores by user
+        const userScoresMap = new Map<string, {
+          user_id: string;
+          total_score: number;
+          total_games_played: number;
+          highest_streak: number;
+          games: { game_type: string; score: number; games_played: number }[];
+        }>();
+
+        data.forEach((score) => {
+          const existing = userScoresMap.get(score.user_id);
+          if (existing) {
+            existing.total_score += score.score;
+            existing.total_games_played += score.games_played;
+            existing.highest_streak = Math.max(existing.highest_streak, score.highest_streak);
+            existing.games.push({
+              game_type: score.game_type,
+              score: score.score,
+              games_played: score.games_played,
+            });
+          } else {
+            userScoresMap.set(score.user_id, {
+              user_id: score.user_id,
+              total_score: score.score,
+              total_games_played: score.games_played,
+              highest_streak: score.highest_streak,
+              games: [{
+                game_type: score.game_type,
+                score: score.score,
+                games_played: score.games_played,
+              }],
+            });
+          }
+        });
+
+        // Convert to array and sort by total score
+        const aggregatedScores = Array.from(userScoresMap.values())
+          .sort((a, b) => b.total_score - a.total_score)
+          .slice(0, 10);
+
+        // Fetch profiles
+        const userIds = aggregatedScores.map(s => s.user_id);
         const { data: profiles } = await supabase
           .from('profiles')
           .select('user_id, username, avatar_url')
           .in('user_id', userIds);
         
-        const scoresWithProfiles = data.map(score => ({
+        const scoresWithProfiles: AggregatedScore[] = aggregatedScores.map(score => ({
           ...score,
           profiles: profiles?.find(p => p.user_id === score.user_id) || undefined
         }));
         
-        setScores(scoresWithProfiles as GameScore[]);
+        setScores(scoresWithProfiles);
       }
     } catch (error) {
       console.error('Error fetching leaderboard:', error);

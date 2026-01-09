@@ -1,10 +1,16 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Send, Users, User, Settings, Trash2 } from "lucide-react";
+import { Send, Users, User, Settings, Trash2, Smile } from "lucide-react";
+import EmojiPicker, { EmojiClickData, Theme } from "emoji-picker-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useMessages, Message } from "@/hooks/useMessages";
 import { Conversation } from "@/hooks/useConversations";
+import { useChatPresence } from "@/hooks/useChatPresence";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -30,12 +37,15 @@ interface ChatViewProps {
 
 const ChatView = ({ conversation, currentUserId, onConversationUpdate }: ChatViewProps) => {
   const { messages, loading, sendMessage, refetch } = useMessages(conversation.id);
+  const { typingUsers, setTyping, isUserOnline } = useChatPresence(currentUserId, conversation.id);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [groupManagementOpen, setGroupManagementOpen] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState<Message | null>(null);
   const [isGroupAdmin, setIsGroupAdmin] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -69,8 +79,25 @@ const ChatView = ({ conversation, currentUserId, onConversationUpdate }: ChatVie
     checkAdminStatus();
   }, [conversation.id, conversation.is_group, conversation.created_by, currentUserId]);
 
+  const handleTyping = useCallback(() => {
+    setTyping(true);
+    
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    
+    typingTimeoutRef.current = setTimeout(() => {
+      setTyping(false);
+    }, 2000);
+  }, [setTyping]);
+
   const handleSend = async () => {
     if (!newMessage.trim() || sending) return;
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    setTyping(false);
 
     setSending(true);
     try {
@@ -88,6 +115,11 @@ const ChatView = ({ conversation, currentUserId, onConversationUpdate }: ChatVie
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
+    setNewMessage((prev) => prev + emojiData.emoji);
+    setShowEmojiPicker(false);
   };
 
   const handleDeleteMessage = async () => {
@@ -138,6 +170,13 @@ const ChatView = ({ conversation, currentUserId, onConversationUpdate }: ChatVie
     return otherParticipant?.avatar_url;
   };
 
+  const getOtherUserId = () => {
+    const otherParticipant = conversation.participants.find(
+      (p) => p.user_id !== currentUserId
+    );
+    return otherParticipant?.user_id;
+  };
+
   const handleHeaderClick = () => {
     if (!conversation.is_group) {
       const otherParticipant = conversation.participants.find(
@@ -149,6 +188,20 @@ const ChatView = ({ conversation, currentUserId, onConversationUpdate }: ChatVie
     }
   };
 
+  // Get typing usernames
+  const getTypingUsernames = () => {
+    return typingUsers
+      .map((userId) => {
+        const participant = conversation.participants.find((p) => p.user_id === userId);
+        return participant?.username || "Someone";
+      })
+      .filter(Boolean);
+  };
+
+  const typingUsernames = getTypingUsernames();
+  const otherUserId = getOtherUserId();
+  const isOtherUserOnline = otherUserId ? isUserOnline(otherUserId) : false;
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -158,21 +211,30 @@ const ChatView = ({ conversation, currentUserId, onConversationUpdate }: ChatVie
           className={`flex items-center gap-3 ${!conversation.is_group ? "hover:opacity-80 cursor-pointer" : ""}`}
           disabled={conversation.is_group}
         >
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={getAvatarUrl() || undefined} />
-            <AvatarFallback className="bg-secondary">
-              {conversation.is_group ? (
-                <Users className="h-5 w-5" />
-              ) : (
-                <User className="h-5 w-5" />
-              )}
-            </AvatarFallback>
-          </Avatar>
+          <div className="relative">
+            <Avatar className="h-10 w-10">
+              <AvatarImage src={getAvatarUrl() || undefined} />
+              <AvatarFallback className="bg-secondary">
+                {conversation.is_group ? (
+                  <Users className="h-5 w-5" />
+                ) : (
+                  <User className="h-5 w-5" />
+                )}
+              </AvatarFallback>
+            </Avatar>
+            {!conversation.is_group && isOtherUserOnline && (
+              <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-background rounded-full" />
+            )}
+          </div>
           <div className="text-left">
             <h3 className="font-semibold text-foreground">{getDisplayName()}</h3>
-            {conversation.is_group && (
+            {conversation.is_group ? (
               <p className="text-xs text-muted-foreground">
                 {conversation.participants.length} members
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                {isOtherUserOnline ? "Online" : "Offline"}
               </p>
             )}
           </div>
@@ -218,12 +280,50 @@ const ChatView = ({ conversation, currentUserId, onConversationUpdate }: ChatVie
         )}
       </ScrollArea>
 
+      {/* Typing Indicator */}
+      {typingUsernames.length > 0 && (
+        <div className="px-4 py-2 text-sm text-muted-foreground">
+          <span className="flex items-center gap-2">
+            <span className="flex gap-1">
+              <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+              <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+              <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+            </span>
+            {typingUsernames.length === 1
+              ? `${typingUsernames[0]} is typing...`
+              : `${typingUsernames.join(", ")} are typing...`}
+          </span>
+        </div>
+      )}
+
       {/* Input */}
       <div className="p-4 border-t border-border">
         <div className="flex items-center gap-2">
+          <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground hover:text-foreground flex-shrink-0"
+              >
+                <Smile className="h-5 w-5" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-full p-0 border-none" side="top" align="start">
+              <EmojiPicker
+                onEmojiClick={handleEmojiClick}
+                theme={Theme.AUTO}
+                width="100%"
+                height={350}
+              />
+            </PopoverContent>
+          </Popover>
           <Input
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
+            onChange={(e) => {
+              setNewMessage(e.target.value);
+              handleTyping();
+            }}
             onKeyPress={handleKeyPress}
             placeholder="Type a message..."
             className="flex-1 bg-muted border-border"

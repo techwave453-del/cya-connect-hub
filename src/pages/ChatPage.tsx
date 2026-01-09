@@ -97,6 +97,7 @@ const ChatPage = () => {
                   selectedId={undefined}
                   onSelect={setSelectedConversation}
                   currentUserId={user.id}
+                  onConversationDeleted={refetch}
                 />
               )}
             </div>
@@ -144,6 +145,7 @@ const ChatPage = () => {
                 selectedId={selectedConversation?.id}
                 onSelect={setSelectedConversation}
                 currentUserId={user.id}
+                onConversationDeleted={refetch}
               />
             )}
           </div>
