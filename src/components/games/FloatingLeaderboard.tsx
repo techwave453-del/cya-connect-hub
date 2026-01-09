@@ -76,7 +76,7 @@ const FloatingLeaderboard = ({ gameType, className }: FloatingLeaderboardProps) 
               <div className="space-y-2">
                 {scores.map((score, index) => (
                   <div
-                    key={score.id}
+                    key={score.user_id}
                     className={cn(
                       "flex items-center gap-3 p-2 rounded-lg transition-colors",
                       index === 0 && "bg-yellow-500/10",
@@ -98,11 +98,11 @@ const FloatingLeaderboard = ({ gameType, className }: FloatingLeaderboardProps) 
                         {score.profiles?.username || 'Anonymous'}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {score.games_played} games
+                        {score.total_games_played} games • {score.games.length} types
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-bold text-primary">{score.score}</p>
+                      <p className="text-sm font-bold text-primary">{score.total_score}</p>
                       <p className="text-xs text-muted-foreground">pts</p>
                     </div>
                   </div>
