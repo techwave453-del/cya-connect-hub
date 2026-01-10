@@ -18,6 +18,7 @@ interface EditProfileDialogProps {
   userId: string;
   currentUsername: string;
   currentAvatarUrl: string | null;
+  currentLocalChurch: string | null;
   onProfileUpdated: () => void;
 }
 
@@ -27,9 +28,11 @@ const EditProfileDialog = ({
   userId,
   currentUsername,
   currentAvatarUrl,
+  currentLocalChurch,
   onProfileUpdated,
 }: EditProfileDialogProps) => {
   const [username, setUsername] = useState(currentUsername);
+  const [localChurch, setLocalChurch] = useState(currentLocalChurch || "");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(currentAvatarUrl);
   const [loading, setLoading] = useState(false);
@@ -107,6 +110,7 @@ const EditProfileDialog = ({
         .update({
           username: username.trim(),
           avatar_url: avatarUrl,
+          local_church: localChurch.trim() || null,
         })
         .eq("user_id", userId);
 
@@ -199,6 +203,24 @@ const EditProfileDialog = ({
               minLength={2}
               maxLength={30}
             />
+          </div>
+
+          {/* Local Church */}
+          <div className="space-y-2">
+            <Label htmlFor="localChurch" className="text-foreground">
+              Local Church
+            </Label>
+            <Input
+              id="localChurch"
+              value={localChurch}
+              onChange={(e) => setLocalChurch(e.target.value)}
+              placeholder="e.g., CYA Nairobi, CYA Mombasa"
+              className="bg-secondary border-border text-foreground"
+              maxLength={100}
+            />
+            <p className="text-xs text-muted-foreground">
+              Your local church will be visible to other members
+            </p>
           </div>
 
           {/* Actions */}

@@ -6,14 +6,18 @@ import { Button } from "@/components/ui/button";
 import ConversationList from "@/components/chat/ConversationList";
 import ChatView from "@/components/chat/ChatView";
 import NewConversationDialog from "@/components/chat/NewConversationDialog";
+import OnlineUsersRibbon from "@/components/chat/OnlineUsersRibbon";
+import ProfileCompletionBanner from "@/components/ProfileCompletionBanner";
 import { useAuth } from "@/hooks/useAuth";
 import { useConversations, Conversation } from "@/hooks/useConversations";
+import { useChatPresence } from "@/hooks/useChatPresence";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const ChatPage = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading, isAuthenticated } = useAuth();
   const { conversations, loading: convsLoading, refetch } = useConversations(user?.id);
+  const { onlineUsers } = useChatPresence(user?.id);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [newConversationOpen, setNewConversationOpen] = useState(false);
   const isMobile = useIsMobile();
@@ -51,6 +55,7 @@ const ChatPage = () => {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <Header />
+        <ProfileCompletionBanner userId={user.id} />
         
         {selectedConversation ? (
           <div className="flex-1 flex flex-col">
@@ -75,6 +80,7 @@ const ChatPage = () => {
           </div>
         ) : (
           <div className="flex-1 flex flex-col">
+            <OnlineUsersRibbon onlineUserIds={onlineUsers} currentUserId={user.id} />
             <div className="flex items-center justify-between p-4 border-b border-border">
               <h1 className="text-xl font-bold text-foreground">Messages</h1>
               <Button
@@ -118,10 +124,12 @@ const ChatPage = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
+      <ProfileCompletionBanner userId={user.id} />
       
       <div className="flex-1 flex">
         {/* Sidebar */}
         <div className="w-80 border-r border-border flex flex-col">
+          <OnlineUsersRibbon onlineUserIds={onlineUsers} currentUserId={user.id} />
           <div className="flex items-center justify-between p-4 border-b border-border">
             <h1 className="text-xl font-bold text-foreground">Messages</h1>
             <Button
