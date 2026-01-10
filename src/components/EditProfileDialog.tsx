@@ -214,7 +214,7 @@ const EditProfileDialog = ({
               id="localChurch"
               value={localChurch}
               onChange={(e) => setLocalChurch(e.target.value)}
-              placeholder="e.g., CYA Nairobi, CYA Mombasa"
+              placeholder="Enter your local church"
               className="bg-secondary border-border text-foreground"
               maxLength={100}
             />
