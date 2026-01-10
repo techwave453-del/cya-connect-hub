@@ -7,7 +7,7 @@ import PostCard from "@/components/PostCard";
 import EditProfileDialog from "@/components/EditProfileDialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Edit2, Loader2, User, Calendar, FileText } from "lucide-react";
+import { ArrowLeft, Edit2, Loader2, User, Calendar, FileText, Church } from "lucide-react";
 import { format } from "date-fns";
 
 interface Profile {
@@ -15,6 +15,7 @@ interface Profile {
   user_id: string;
   username: string;
   avatar_url: string | null;
+  local_church: string | null;
   created_at: string;
 }
 
@@ -212,7 +213,7 @@ const ProfilePage = () => {
                 )}
               </div>
 
-              <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
                   <span>Joined {format(new Date(profile.created_at), "MMM yyyy")}</span>
@@ -221,6 +222,12 @@ const ProfilePage = () => {
                   <FileText className="w-4 h-4" />
                   <span>{posts.length} posts</span>
                 </div>
+                {profile.local_church && (
+                  <div className="flex items-center gap-1">
+                    <Church className="w-4 h-4 text-primary" />
+                    <span className="text-primary">{profile.local_church}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -274,7 +281,8 @@ const ProfilePage = () => {
           onOpenChange={setEditDialogOpen}
           userId={user.id}
           currentUsername={profile.username}
-          currentAvatarUrl={profile.avatar_url}
+          currentAvatarUrl={profile.avatar_url || null}
+          currentLocalChurch={profile.local_church}
           onProfileUpdated={handleProfileUpdate}
         />
       )}
