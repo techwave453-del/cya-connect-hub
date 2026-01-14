@@ -15,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useTheme, themes } from "@/contexts/ThemeContext";
 import { useTasks, Task } from "@/hooks/useTasks";
 import { useActivities, Activity } from "@/hooks/useActivities";
-import { Shield, Users, Palette, BookOpen, Plus, Trash2, RefreshCw, ArrowLeft, ListTodo, CalendarDays, Pencil, Gamepad2 } from "lucide-react";
+import { Shield, Users, Palette, BookOpen, Plus, Trash2, RefreshCw, ArrowLeft, ListTodo, CalendarDays, Pencil, Gamepad2, Image } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { z } from "zod";
 import AdminGameManagement from "@/components/games/AdminGameManagement";
+import BrandingManagement from "@/components/admin/BrandingManagement";
 
 const emailSchema = z.string().email("Invalid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
@@ -480,6 +481,10 @@ const AdminPage = () => {
             <TabsTrigger value="games" className="gap-2">
               <Gamepad2 className="h-4 w-4" />
               Games
+            </TabsTrigger>
+            <TabsTrigger value="branding" className="gap-2">
+              <Image className="h-4 w-4" />
+              Branding
             </TabsTrigger>
           </TabsList>
 
@@ -1094,6 +1099,10 @@ const AdminPage = () => {
                 <AdminGameManagement />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="branding" className="space-y-6">
+            <BrandingManagement />
           </TabsContent>
         </Tabs>
       </div>
