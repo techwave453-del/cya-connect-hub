@@ -14,6 +14,7 @@ import GamesPage from "./pages/GamesPage";
 import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
 import OfflineIndicator from "@/components/OfflineIndicator";
+import DynamicPwaHead from "@/components/DynamicPwaHead";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ const App = () => (
     <ThemeProvider>
       <OfflineProvider>
         <TooltipProvider>
+          <DynamicPwaHead />
           <Toaster />
           <Sonner />
           <OfflineIndicator />

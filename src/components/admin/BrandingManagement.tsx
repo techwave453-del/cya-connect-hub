@@ -65,6 +65,15 @@ const BrandingManagement = () => {
 
   return (
     <div className="space-y-6">
+      {/* Info Banner */}
+      <Card className="bg-primary/10 border-primary/30">
+        <CardContent className="pt-4">
+          <p className="text-sm text-foreground">
+            <strong>✨ Auto-Apply:</strong> Uploaded PWA icons (192x192 and 512x512) are automatically applied to the app manifest. Users installing the app will see your custom icons!
+          </p>
+        </CardContent>
+      </Card>
+
       {/* PWA Icon Presets */}
       <Card className="bg-card border-border">
         <CardHeader>
