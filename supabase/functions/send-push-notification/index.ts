@@ -90,16 +90,21 @@ serve(async (req) => {
 
     console.log(`Found ${subscriptions.length} subscriptions for user`);
 
+    // Create notification payload with all required fields for device notification bar
     const payload = JSON.stringify({
       title,
       body,
       icon: '/pwa-192x192.png',
       badge: '/pwa-192x192.png',
+      tag: data?.conversationId || `notification-${Date.now()}`,
+      timestamp: Date.now(),
       data: {
         ...data,
-        url: '/',
+        url: data?.conversationId ? `/chat?conversation=${data.conversationId}` : '/',
       },
     });
+
+    console.log('Push payload:', payload);
 
     let sentCount = 0;
     const failedEndpoints: string[] = [];
