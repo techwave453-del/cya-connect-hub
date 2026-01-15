@@ -15,6 +15,7 @@ import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
 import OfflineIndicator from "@/components/OfflineIndicator";
 import DynamicPwaHead from "@/components/DynamicPwaHead";
+import PwaUpdateHandler from "@/components/PwaUpdateHandler";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ const App = () => (
       <OfflineProvider>
         <TooltipProvider>
           <DynamicPwaHead />
+          <PwaUpdateHandler />
           <Toaster />
           <Sonner />
           <OfflineIndicator />
