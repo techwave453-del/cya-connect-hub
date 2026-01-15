@@ -70,11 +70,12 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             recipientUserId: participant.user_id,
-            title: `New message from ${senderName}`,
+            title: `💬 ${senderName}`,
             body: content.length > 100 ? content.substring(0, 100) + '...' : content,
             data: {
               conversationId,
               messageId,
+              type: 'message',
             },
           }),
         });
