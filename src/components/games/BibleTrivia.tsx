@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { CheckCircle, XCircle, Loader2, BookOpen, Zap, RotateCcw, Trophy } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, BookOpen, Zap, RotateCcw, Trophy, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useBibleGames, BibleGame } from "@/hooks/useBibleGames";
+import { useQuestionGenerator } from "@/hooks/useQuestionGenerator";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 
@@ -12,7 +13,8 @@ interface BibleTriviaProps {
 }
 
 const BibleTrivia = ({ onGameEnd }: BibleTriviaProps) => {
-  const { games, loading, isOnline, syncScore, getLocalProgress, saveLocalProgress } = useBibleGames('trivia');
+  const { games, loading, isOnline, syncScore, getLocalProgress, saveLocalProgress, refetch } = useBibleGames('trivia');
+  const { generateQuestions, isGenerating, shouldGenerate } = useQuestionGenerator();
   
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
@@ -93,13 +95,18 @@ const BibleTrivia = ({ onGameEnd }: BibleTriviaProps) => {
       // Sync to server if online
       await syncScore('trivia', score, highestStreak);
       
+      // Generate new questions if online and eligible
+      if (isOnline && shouldGenerate('trivia')) {
+        generateQuestions('trivia', 3).then(() => refetch());
+      }
+      
       onGameEnd?.(score, highestStreak);
     } else {
       setCurrentIndex(prev => prev + 1);
       setSelectedAnswer(null);
       setIsAnswered(false);
     }
-  }, [currentIndex, shuffledGames.length, score, highestStreak, streak, syncScore, saveLocalProgress, onGameEnd]);
+  }, [currentIndex, shuffledGames.length, score, highestStreak, streak, syncScore, saveLocalProgress, onGameEnd, isOnline, shouldGenerate, generateQuestions, refetch]);
 
   const handleRestart = () => {
     const shuffled = [...games].sort(() => Math.random() - 0.5);
@@ -151,7 +158,13 @@ const BibleTrivia = ({ onGameEnd }: BibleTriviaProps) => {
               Questions answered: {shuffledGames.length}
             </p>
           </div>
-          <Button onClick={handleRestart} className="gap-2">
+          {isGenerating && (
+            <div className="flex items-center gap-2 text-primary mb-4">
+              <Sparkles className="w-4 h-4 animate-pulse" />
+              <span className="text-sm">Generating new questions...</span>
+            </div>
+          )}
+          <Button onClick={handleRestart} className="gap-2" disabled={isGenerating}>
             <RotateCcw className="w-4 h-4" />
             Play Again
           </Button>

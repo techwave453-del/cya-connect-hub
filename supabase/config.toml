@@ -15,3 +15,6 @@ verify_jwt = false
 
 [functions.admin-create-user]
 verify_jwt = true
+
+[functions.generate-game-questions]
+verify_jwt = false

@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { CheckCircle, XCircle, Loader2, User, Eye, Lightbulb, RotateCcw, Trophy } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, User, Eye, Lightbulb, RotateCcw, Trophy, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useBibleGames, BibleGame } from "@/hooks/useBibleGames";
+import { useQuestionGenerator } from "@/hooks/useQuestionGenerator";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 
@@ -12,7 +13,8 @@ interface GuessCharacterProps {
 }
 
 const GuessCharacter = ({ onGameEnd }: GuessCharacterProps) => {
-  const { games, loading, isOnline, syncScore, getLocalProgress, saveLocalProgress } = useBibleGames('guess_character');
+  const { games, loading, isOnline, syncScore, getLocalProgress, saveLocalProgress, refetch } = useBibleGames('guess_character');
+  const { generateQuestions, isGenerating, shouldGenerate } = useQuestionGenerator();
   
   const [currentIndex, setCurrentIndex] = useState(0);
   const [revealedClues, setRevealedClues] = useState(1);
@@ -117,6 +119,11 @@ const GuessCharacter = ({ onGameEnd }: GuessCharacterProps) => {
       // Sync to server if online
       await syncScore('guess_character', score, highestStreak);
       
+      // Generate new questions if online and eligible
+      if (isOnline && shouldGenerate('guess_character')) {
+        generateQuestions('guess_character', 3).then(() => refetch());
+      }
+      
       onGameEnd?.(score, highestStreak);
     } else {
       setCurrentIndex(prev => prev + 1);
@@ -125,7 +132,7 @@ const GuessCharacter = ({ onGameEnd }: GuessCharacterProps) => {
       setRevealedClues(1);
       setShowHint(false);
     }
-  }, [currentIndex, shuffledGames.length, score, highestStreak, streak, syncScore, saveLocalProgress, onGameEnd]);
+  }, [currentIndex, shuffledGames.length, score, highestStreak, streak, syncScore, saveLocalProgress, onGameEnd, isOnline, shouldGenerate, generateQuestions, refetch]);
 
   const handleRestart = () => {
     const shuffled = [...games].sort(() => Math.random() - 0.5);
@@ -179,7 +186,13 @@ const GuessCharacter = ({ onGameEnd }: GuessCharacterProps) => {
               Characters guessed: {shuffledGames.length}
             </p>
           </div>
-          <Button onClick={handleRestart} className="gap-2">
+          {isGenerating && (
+            <div className="flex items-center gap-2 text-primary mb-4">
+              <Sparkles className="w-4 h-4 animate-pulse" />
+              <span className="text-sm">Generating new characters...</span>
+            </div>
+          )}
+          <Button onClick={handleRestart} className="gap-2" disabled={isGenerating}>
             <RotateCcw className="w-4 h-4" />
             Play Again
           </Button>
