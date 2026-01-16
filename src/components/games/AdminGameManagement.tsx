@@ -1,16 +1,17 @@
 import { useState, useEffect } from "react";
-import { Plus, Pencil, Trash2, Loader2, Save, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Save, X, Sparkles, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { BibleGame } from "@/hooks/useBibleGames";
+import { useQuestionGenerator } from "@/hooks/useQuestionGenerator";
 
 const AdminGameManagement = () => {
   const [games, setGames] = useState<BibleGame[]>([]);
@@ -18,6 +19,8 @@ const AdminGameManagement = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingGame, setEditingGame] = useState<BibleGame | null>(null);
   const [saving, setSaving] = useState(false);
+  const [generateCount, setGenerateCount] = useState(3);
+  const { generateQuestions, isGenerating } = useQuestionGenerator();
 
   // Form state
   const [formData, setFormData] = useState({
@@ -186,8 +189,98 @@ const AdminGameManagement = () => {
     );
   }
 
+  const handleGenerateQuestions = async (gameType: "trivia" | "guess_character") => {
+    const result = await generateQuestions(gameType, generateCount);
+    if (result?.success) {
+      fetchGames();
+    }
+  };
+
+  const triviaCount = games.filter(g => g.game_type === 'trivia').length;
+  const characterCount = games.filter(g => g.game_type === 'guess_character').length;
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* AI Question Generation Section */}
+      <Card className="bg-gradient-to-br from-primary/10 via-primary/5 to-background border-primary/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Sparkles className="w-5 h-5 text-primary" />
+            AI Question Generator
+          </CardTitle>
+          <CardDescription>
+            Generate new Bible game questions using AI. Questions are automatically saved to the database.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-4">
+            <Label className="whitespace-nowrap">Questions per type:</Label>
+            <Select
+              value={generateCount.toString()}
+              onValueChange={(value) => setGenerateCount(parseInt(value))}
+            >
+              <SelectTrigger className="w-24">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1</SelectItem>
+                <SelectItem value="3">3</SelectItem>
+                <SelectItem value="5">5</SelectItem>
+                <SelectItem value="10">10</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Button
+              onClick={() => handleGenerateQuestions("trivia")}
+              disabled={isGenerating}
+              variant="outline"
+              className="gap-2 h-auto py-3 flex-col items-start"
+            >
+              <div className="flex items-center gap-2 w-full">
+                {isGenerating ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Wand2 className="w-4 h-4" />
+                )}
+                <span className="font-medium">Generate Trivia</span>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {triviaCount} existing questions
+              </span>
+            </Button>
+
+            <Button
+              onClick={() => handleGenerateQuestions("guess_character")}
+              disabled={isGenerating}
+              variant="outline"
+              className="gap-2 h-auto py-3 flex-col items-start"
+            >
+              <div className="flex items-center gap-2 w-full">
+                {isGenerating ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Wand2 className="w-4 h-4" />
+                )}
+                <span className="font-medium">Generate Characters</span>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {characterCount} existing questions
+              </span>
+            </Button>
+          </div>
+
+          {isGenerating && (
+            <div className="flex items-center gap-2 text-sm text-primary animate-pulse">
+              <Sparkles className="w-4 h-4" />
+              AI is generating {generateCount} new questions...
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Existing Games Section */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Bible Games ({games.length})</h2>
         <Dialog open={dialogOpen} onOpenChange={(open) => {
