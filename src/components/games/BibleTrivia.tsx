@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useBibleGames, BibleGame } from "@/hooks/useBibleGames";
 import { useQuestionGenerator } from "@/hooks/useQuestionGenerator";
+import { useAnsweredQuestions } from "@/hooks/useAnsweredQuestions";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 
@@ -15,6 +16,7 @@ interface BibleTriviaProps {
 const BibleTrivia = ({ onGameEnd }: BibleTriviaProps) => {
   const { games, loading, isOnline, syncScore, getLocalProgress, saveLocalProgress, refetch } = useBibleGames('trivia');
   const { generateQuestions, isGenerating, shouldGenerate } = useQuestionGenerator();
+  const { answeredIds, answeredCount, markAsAnswered, getUnansweredFirst, loading: answeredLoading } = useAnsweredQuestions('trivia');
   
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
@@ -25,13 +27,13 @@ const BibleTrivia = ({ onGameEnd }: BibleTriviaProps) => {
   const [gameEnded, setGameEnded] = useState(false);
   const [shuffledGames, setShuffledGames] = useState<BibleGame[]>([]);
 
-  // Shuffle games on mount
+  // Prioritize unanswered questions
   useEffect(() => {
-    if (games.length > 0) {
-      const shuffled = [...games].sort(() => Math.random() - 0.5);
-      setShuffledGames(shuffled);
+    if (games.length > 0 && !answeredLoading) {
+      const prioritized = getUnansweredFirst(games);
+      setShuffledGames(prioritized);
     }
-  }, [games]);
+  }, [games, answeredLoading, getUnansweredFirst]);
 
   // Load local progress
   useEffect(() => {
@@ -47,13 +49,16 @@ const BibleTrivia = ({ onGameEnd }: BibleTriviaProps) => {
   const currentGame = shuffledGames[currentIndex];
   const progress = shuffledGames.length > 0 ? ((currentIndex + 1) / shuffledGames.length) * 100 : 0;
 
-  const handleSelectAnswer = (answer: string) => {
+  const handleSelectAnswer = async (answer: string) => {
     if (isAnswered) return;
     
     setSelectedAnswer(answer);
     setIsAnswered(true);
     
     const isCorrect = answer === currentGame.correct_answer;
+    
+    // Track this question as answered
+    await markAsAnswered(currentGame.id, isCorrect);
     
     if (isCorrect) {
       setScore(prev => prev + currentGame.points);
@@ -109,8 +114,8 @@ const BibleTrivia = ({ onGameEnd }: BibleTriviaProps) => {
   }, [currentIndex, shuffledGames.length, score, highestStreak, streak, syncScore, saveLocalProgress, onGameEnd, isOnline, shouldGenerate, generateQuestions, refetch]);
 
   const handleRestart = () => {
-    const shuffled = [...games].sort(() => Math.random() - 0.5);
-    setShuffledGames(shuffled);
+    const prioritized = getUnansweredFirst(games);
+    setShuffledGames(prioritized);
     setCurrentIndex(0);
     setSelectedAnswer(null);
     setIsAnswered(false);
@@ -119,7 +124,7 @@ const BibleTrivia = ({ onGameEnd }: BibleTriviaProps) => {
     setGameEnded(false);
   };
 
-  if (loading) {
+  if (loading || answeredLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -155,8 +160,11 @@ const BibleTrivia = ({ onGameEnd }: BibleTriviaProps) => {
               Best Streak: <span className="font-semibold text-primary">{highestStreak}</span> correct answers
             </p>
             <p className="text-sm text-muted-foreground">
-              Questions answered: {shuffledGames.length}
-            </p>
+159:               Questions answered: {shuffledGames.length}
+160:             </p>
+161:             <p className="text-xs text-muted-foreground">
+162:               Total progress: {answeredCount}/{games.length} questions completed
+163:             </p>
           </div>
           {isGenerating && (
             <div className="flex items-center gap-2 text-primary mb-4">
