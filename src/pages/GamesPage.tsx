@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, Gamepad2, WifiOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import GuessCharacter from "@/components/games/GuessCharacter";
 import DailyChallenge from "@/components/games/DailyChallenge";
 import FloatingLeaderboard from "@/components/games/FloatingLeaderboard";
 import { useOffline } from "@/contexts/OfflineContext";
+import { useNewQuestionsCount } from "@/hooks/useNewQuestionsCount";
 
 type GameType = 'trivia' | 'guess_character' | 'fill_blank' | 'memory_verse' | 'daily_challenge';
 
@@ -16,6 +17,12 @@ const GamesPage = () => {
   const [selectedGame, setSelectedGame] = useState<GameType | null>(null);
   const { isOnline } = useOffline();
   const navigate = useNavigate();
+  const { markAsSeen } = useNewQuestionsCount();
+
+  // Mark questions as seen when visiting the games page
+  useEffect(() => {
+    markAsSeen();
+  }, [markAsSeen]);
 
   const handleSelectGame = (gameType: GameType) => {
     setSelectedGame(gameType);
