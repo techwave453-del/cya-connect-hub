@@ -1,6 +1,8 @@
 import { FileText, ListTodo, Activity, Gamepad2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
+import { useNewQuestionsCount } from "@/hooks/useNewQuestionsCount";
 
 interface Tab {
   id: string;
@@ -22,6 +24,7 @@ interface TabNavigationProps {
 
 const TabNavigation = ({ activeTab, onTabChange }: TabNavigationProps) => {
   const navigate = useNavigate();
+  const { newCount } = useNewQuestionsCount();
 
   const handleTabClick = (tab: Tab) => {
     if (tab.route) {
@@ -38,7 +41,7 @@ const TabNavigation = ({ activeTab, onTabChange }: TabNavigationProps) => {
           key={tab.id}
           onClick={() => handleTabClick(tab)}
           className={cn(
-            "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 whitespace-nowrap",
+            "relative flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 whitespace-nowrap",
             activeTab === tab.id
               ? "bg-primary text-primary-foreground glow-gold"
               : "bg-secondary text-muted-foreground hover:bg-secondary/80 hover:text-foreground"
@@ -46,6 +49,14 @@ const TabNavigation = ({ activeTab, onTabChange }: TabNavigationProps) => {
         >
           {tab.icon}
           <span>{tab.label}</span>
+          {tab.id === 'games' && newCount > 0 && (
+            <Badge 
+              variant="destructive" 
+              className="absolute -top-1 -right-1 h-5 min-w-5 flex items-center justify-center p-0 text-xs animate-pulse"
+            >
+              {newCount > 9 ? "9+" : newCount}
+            </Badge>
+          )}
         </button>
       ))}
     </div>
