@@ -504,6 +504,38 @@ export type Database = {
         }
         Relationships: []
       }
+      user_answered_questions: {
+        Row: {
+          answered_at: string
+          id: string
+          question_id: string
+          user_id: string
+          was_correct: boolean
+        }
+        Insert: {
+          answered_at?: string
+          id?: string
+          question_id: string
+          user_id: string
+          was_correct?: boolean
+        }
+        Update: {
+          answered_at?: string
+          id?: string
+          question_id?: string
+          user_id?: string
+          was_correct?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_answered_questions_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "bible_games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string

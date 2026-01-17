@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useBibleGames, BibleGame } from "@/hooks/useBibleGames";
 import { useQuestionGenerator } from "@/hooks/useQuestionGenerator";
+import { useAnsweredQuestions } from "@/hooks/useAnsweredQuestions";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 
@@ -15,6 +16,7 @@ interface GuessCharacterProps {
 const GuessCharacter = ({ onGameEnd }: GuessCharacterProps) => {
   const { games, loading, isOnline, syncScore, getLocalProgress, saveLocalProgress, refetch } = useBibleGames('guess_character');
   const { generateQuestions, isGenerating, shouldGenerate } = useQuestionGenerator();
+  const { answeredIds, answeredCount, markAsAnswered, getUnansweredFirst, loading: answeredLoading } = useAnsweredQuestions('guess_character');
   
   const [currentIndex, setCurrentIndex] = useState(0);
   const [revealedClues, setRevealedClues] = useState(1);
@@ -27,13 +29,13 @@ const GuessCharacter = ({ onGameEnd }: GuessCharacterProps) => {
   const [shuffledGames, setShuffledGames] = useState<BibleGame[]>([]);
   const [showHint, setShowHint] = useState(false);
 
-  // Shuffle games on mount
+  // Prioritize unanswered questions
   useEffect(() => {
-    if (games.length > 0) {
-      const shuffled = [...games].sort(() => Math.random() - 0.5);
-      setShuffledGames(shuffled);
+    if (games.length > 0 && !answeredLoading) {
+      const prioritized = getUnansweredFirst(games);
+      setShuffledGames(prioritized);
     }
-  }, [games]);
+  }, [games, answeredLoading, getUnansweredFirst]);
 
   // Load local progress
   useEffect(() => {
@@ -70,7 +72,7 @@ const GuessCharacter = ({ onGameEnd }: GuessCharacterProps) => {
     }
   };
 
-  const handleSelectAnswer = (answer: string) => {
+  const handleSelectAnswer = async (answer: string) => {
     if (isAnswered) return;
     
     setSelectedAnswer(answer);
@@ -78,6 +80,9 @@ const GuessCharacter = ({ onGameEnd }: GuessCharacterProps) => {
     
     const isCorrect = answer === currentGame.correct_answer;
     const earnedPoints = calculatePoints();
+    
+    // Track this question as answered
+    await markAsAnswered(currentGame.id, isCorrect);
     
     if (isCorrect) {
       setScore(prev => prev + earnedPoints);
@@ -135,8 +140,8 @@ const GuessCharacter = ({ onGameEnd }: GuessCharacterProps) => {
   }, [currentIndex, shuffledGames.length, score, highestStreak, streak, syncScore, saveLocalProgress, onGameEnd, isOnline, shouldGenerate, generateQuestions, refetch]);
 
   const handleRestart = () => {
-    const shuffled = [...games].sort(() => Math.random() - 0.5);
-    setShuffledGames(shuffled);
+    const prioritized = getUnansweredFirst(games);
+    setShuffledGames(prioritized);
     setCurrentIndex(0);
     setSelectedAnswer(null);
     setIsAnswered(false);
@@ -147,7 +152,7 @@ const GuessCharacter = ({ onGameEnd }: GuessCharacterProps) => {
     setGameEnded(false);
   };
 
-  if (loading) {
+  if (loading || answeredLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -184,6 +189,9 @@ const GuessCharacter = ({ onGameEnd }: GuessCharacterProps) => {
             </p>
             <p className="text-sm text-muted-foreground">
               Characters guessed: {shuffledGames.length}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Total progress: {answeredCount}/{games.length} characters completed
             </p>
           </div>
           {isGenerating && (
