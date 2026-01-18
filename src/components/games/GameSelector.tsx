@@ -1,8 +1,8 @@
-import { BookOpen, User, PenTool, Brain, Lock, Calendar } from "lucide-react";
+import { BookOpen, User, PenTool, Brain, Lock, Calendar, Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-type GameType = 'trivia' | 'guess_character' | 'fill_blank' | 'memory_verse' | 'daily_challenge';
+type GameType = 'trivia' | 'guess_character' | 'fill_blank' | 'memory_verse' | 'daily_challenge' | 'multiplayer';
 
 interface Game {
   id: GameType;
@@ -16,13 +16,21 @@ interface Game {
 
 const games: Game[] = [
   {
+    id: 'multiplayer',
+    title: 'Local Multiplayer',
+    description: 'Play with friends on the same WiFi network!',
+    icon: <Users className="w-8 h-8" />,
+    available: true,
+    color: 'from-green-500/20 to-green-600/10',
+    featured: true
+  },
+  {
     id: 'daily_challenge',
     title: 'Daily Challenge',
     description: 'One question from each game - new daily!',
     icon: <Calendar className="w-8 h-8" />,
     available: true,
-    color: 'from-amber-500/20 to-amber-600/10',
-    featured: true
+    color: 'from-amber-500/20 to-amber-600/10'
   },
   {
     id: 'trivia',

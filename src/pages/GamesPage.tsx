@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, Gamepad2, WifiOff } from "lucide-react";
+import { ArrowLeft, Gamepad2, WifiOff, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
@@ -8,10 +8,11 @@ import BibleTrivia from "@/components/games/BibleTrivia";
 import GuessCharacter from "@/components/games/GuessCharacter";
 import DailyChallenge from "@/components/games/DailyChallenge";
 import FloatingLeaderboard from "@/components/games/FloatingLeaderboard";
+import MultiplayerMode from "@/components/games/multiplayer/MultiplayerMode";
 import { useOffline } from "@/contexts/OfflineContext";
 import { useNewQuestionsCount } from "@/hooks/useNewQuestionsCount";
 
-type GameType = 'trivia' | 'guess_character' | 'fill_blank' | 'memory_verse' | 'daily_challenge';
+type GameType = 'trivia' | 'guess_character' | 'fill_blank' | 'memory_verse' | 'daily_challenge' | 'multiplayer';
 
 const GamesPage = () => {
   const [selectedGame, setSelectedGame] = useState<GameType | null>(null);
@@ -44,6 +45,8 @@ const GamesPage = () => {
         return <GuessCharacter onGameEnd={() => {}} />;
       case 'daily_challenge':
         return <DailyChallenge onGameEnd={() => {}} />;
+      case 'multiplayer':
+        return <MultiplayerMode onBack={() => setSelectedGame(null)} />;
       default:
         return null;
     }
