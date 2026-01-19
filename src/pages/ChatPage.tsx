@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, MessageCircle, ArrowLeft } from "lucide-react";
+import { Plus, MessageCircle, ArrowLeft, Home } from "lucide-react";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import ConversationList from "@/components/chat/ConversationList";
@@ -59,7 +59,7 @@ const ChatPage = () => {
         
         {selectedConversation ? (
           <div className="flex-1 flex flex-col">
-            <div className="p-2 border-b border-border">
+            <div className="p-2 border-b border-border flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="sm"
@@ -82,7 +82,17 @@ const ChatPage = () => {
           <div className="flex-1 flex flex-col">
             <OnlineUsersRibbon onlineUserIds={onlineUsers} currentUserId={user.id} />
             <div className="flex items-center justify-between p-4 border-b border-border">
-              <h1 className="text-xl font-bold text-foreground">Messages</h1>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate("/")}
+                  className="text-muted-foreground"
+                >
+                  <Home className="h-4 w-4" />
+                </Button>
+                <h1 className="text-xl font-bold text-foreground">Messages</h1>
+              </div>
               <Button
                 onClick={() => setNewConversationOpen(true)}
                 size="icon"
@@ -131,7 +141,17 @@ const ChatPage = () => {
         <div className="w-80 border-r border-border flex flex-col">
           <OnlineUsersRibbon onlineUserIds={onlineUsers} currentUserId={user.id} />
           <div className="flex items-center justify-between p-4 border-b border-border">
-            <h1 className="text-xl font-bold text-foreground">Messages</h1>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/")}
+                className="text-muted-foreground"
+              >
+                <Home className="h-4 w-4" />
+              </Button>
+              <h1 className="text-xl font-bold text-foreground">Messages</h1>
+            </div>
             <Button
               onClick={() => setNewConversationOpen(true)}
               size="icon"

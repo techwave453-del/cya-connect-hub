@@ -39,18 +39,6 @@ const Index = () => {
     setCreatePostOpen(true);
   };
 
-  const handleFABClick = () => {
-    if (!isAuthenticated) {
-      toast({
-        title: "Sign in required",
-        description: "Please sign in to create a post.",
-        variant: "destructive",
-      });
-      navigate("/auth");
-      return;
-    }
-    setCreatePostOpen(true);
-  };
 
   const handleDeletePost = async (postId: string) => {
     try {
@@ -223,7 +211,7 @@ const Index = () => {
         )}
       </main>
       
-      <FloatingActionButton onClick={handleFABClick} />
+      <FloatingActionButton />
 
       {/* Create Post Dialog */}
       {user && profile && (

@@ -187,11 +187,6 @@ const MultiplayerMode = ({ onBack }: MultiplayerModeProps) => {
   if (room.status === 'waiting' || !gameState) {
     return (
       <div className="space-y-4">
-        <Button variant="ghost" size="sm" onClick={onBack} className="gap-2">
-          <ArrowLeft className="w-4 h-4" />
-          Back to Games
-        </Button>
-
         <GameLobby
           room={room}
           peers={peers}
