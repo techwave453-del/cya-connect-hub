@@ -117,6 +117,9 @@ const Auth = () => {
           password,
           options: {
             emailRedirectTo: redirectUrl,
+            data: {
+              username: username || email.split("@")[0],
+            },
           },
         });
 
@@ -127,18 +130,6 @@ const Auth = () => {
             variant: "destructive",
           });
         } else if (data.user) {
-          // Create profile
-          const { error: profileError } = await supabase
-            .from("profiles")
-            .insert({
-              user_id: data.user.id,
-              username: username || email.split("@")[0],
-            });
-
-          if (profileError) {
-            console.error("Profile creation error:", profileError);
-          }
-
           toast({
             title: "Account Created!",
             description: "Welcome to CYA Kenya!",
