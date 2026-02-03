@@ -161,7 +161,12 @@ export class PeerConnectionManager {
     this.signaling.on('peer-announce', (data) => {
       if (data.from !== this.localId && !this.connections.has(data.from) && !this.pendingConnections.has(data.from)) {
         console.log('Peer announced:', data.from, data.senderName);
-        // New peer announced, initiate connection
+        // Respond to let them know we're here
+        this.signaling.send('peer-response', { 
+          to: data.from,
+          senderName: this.localName 
+        }, this.localId);
+        // Initiate connection
         this.connectToPeer(data.from, data.senderName);
       }
     });
@@ -169,7 +174,7 @@ export class PeerConnectionManager {
     this.signaling.on('peer-response', (data) => {
       if (data.to === this.localId && !this.connections.has(data.from) && !this.pendingConnections.has(data.from)) {
         console.log('Peer responded:', data.from, data.senderName);
-        // Response to our announcement
+        // Response to our announcement - initiate connection
         this.connectToPeer(data.from, data.senderName);
       }
     });

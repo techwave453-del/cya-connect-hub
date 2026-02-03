@@ -95,31 +95,34 @@ export const useLocalMultiplayer = () => {
     
     // Setup event handlers
     connectionManager.current.onPeerConnected((peer) => {
-      setState(prev => ({
-        ...prev,
-        peers: [...prev.peers, peer],
-        room: prev.room ? {
+      setState(prev => {
+        const updatedRoom = prev.room ? {
           ...prev.room,
           currentPlayers: [...prev.room.currentPlayers, peer]
-        } : null
-      }));
-      
-      toast({
-        title: "Player Joined! 🎮",
-        description: `${peer.name} has joined the game`
-      });
-
-      // Send room update to all peers
-      connectionManager.current?.broadcast({
-        type: 'room_update',
-        senderId: localId.current,
-        senderName: localName.current,
-        payload: {
-          room: {
-            ...room,
-            currentPlayers: [...room.currentPlayers, peer]
-          }
+        } : null;
+        
+        // Send room update to the newly connected peer (and all others)
+        if (updatedRoom) {
+          setTimeout(() => {
+            connectionManager.current?.broadcast({
+              type: 'room_update',
+              senderId: localId.current,
+              senderName: localName.current,
+              payload: { room: updatedRoom }
+            });
+          }, 100);
         }
+        
+        toast({
+          title: "Player Joined! 🎮",
+          description: `${peer.name} has joined the game`
+        });
+        
+        return {
+          ...prev,
+          peers: [...prev.peers, peer],
+          room: updatedRoom
+        };
       });
     });
 
@@ -153,6 +156,9 @@ export const useLocalMultiplayer = () => {
       gameState: null
     });
 
+    // Host announces presence so guests can discover them
+    connectionManager.current.announce();
+
     return roomId;
   }, []);
 
@@ -173,11 +179,15 @@ export const useLocalMultiplayer = () => {
     connectionManager.current = new PeerConnectionManager(roomCode, localId.current, localName.current);
     
     connectionManager.current.onPeerConnected((peer) => {
-      setState(prev => ({
-        ...prev,
-        peers: [...prev.peers, peer],
-        connectionStatus: 'connected'
-      }));
+      setState(prev => {
+        // Mark as host if this is the first peer (they're the room host)
+        const updatedPeer = { ...peer, isHost: prev.peers.length === 0 };
+        return {
+          ...prev,
+          peers: [...prev.peers, updatedPeer],
+          connectionStatus: 'connected'
+        };
+      });
     });
 
     connectionManager.current.onPeerDisconnected((peerId) => {
@@ -196,27 +206,49 @@ export const useLocalMultiplayer = () => {
 
     // Wait for connection
     return new Promise<boolean>((resolve) => {
+      let resolved = false;
+      
       const timeout = setTimeout(() => {
-        if (state.connectionStatus !== 'connected') {
+        if (!resolved && connectionManager.current?.getConnectedPeerCount() === 0) {
+          resolved = true;
           toast({
             title: "Connection Failed",
             description: "Couldn't find the game room. Check the code and try again.",
             variant: "destructive"
           });
+          connectionManager.current?.close();
+          connectionManager.current = null;
           setState(prev => ({ ...prev, connectionStatus: 'disconnected' }));
           resolve(false);
         }
-      }, 10000);
+      }, 15000);
 
       const checkConnection = setInterval(() => {
-        if (connectionManager.current && connectionManager.current.getConnectedPeerCount() > 0) {
+        if (!resolved && connectionManager.current && connectionManager.current.getConnectedPeerCount() > 0) {
+          resolved = true;
           clearTimeout(timeout);
           clearInterval(checkConnection);
+          
+          // Create local player and add to room
+          const localPlayer: LocalPeer = {
+            id: localId.current,
+            name: localName.current,
+            connectionMethod: 'wifi',
+            isHost: false,
+            score: 0,
+            ready: true
+          };
+          
           setState(prev => ({
             ...prev,
             isHost: false,
-            connectionStatus: 'connected'
+            connectionStatus: 'connected',
+            room: prev.room ? {
+              ...prev.room,
+              currentPlayers: [...prev.room.currentPlayers, localPlayer]
+            } : null
           }));
+          
           toast({
             title: "Connected! 🎮",
             description: "You've joined the game"
