@@ -65,10 +65,17 @@ export class RealtimeSignaling {
   private handlers: Map<string, (data: any) => void> = new Map();
   private roomId: string;
   private localId: string;
+  private isSubscribed: boolean = false;
+  private pendingMessages: Array<{ type: string; data: any; from: string }> = [];
+  private subscribePromise: Promise<void>;
+  private resolveSubscribe!: () => void;
 
   constructor(roomId: string, localId: string) {
     this.roomId = roomId;
     this.localId = localId;
+    this.subscribePromise = new Promise((resolve) => {
+      this.resolveSubscribe = resolve;
+    });
     this.setupChannel();
   }
 
@@ -92,11 +99,29 @@ export class RealtimeSignaling {
       })
       .subscribe((status) => {
         console.log('Signaling channel status:', status);
+        if (status === 'SUBSCRIBED') {
+          this.isSubscribed = true;
+          this.resolveSubscribe();
+          // Send any pending messages
+          this.pendingMessages.forEach(msg => {
+            this.send(msg.type, msg.data, msg.from);
+          });
+          this.pendingMessages = [];
+        }
       });
+  }
+
+  async waitForSubscription(): Promise<void> {
+    return this.subscribePromise;
   }
 
   send(type: string, data: any, from: string) {
     if (this.channel) {
+      if (!this.isSubscribed) {
+        // Queue message if not yet subscribed
+        this.pendingMessages.push({ type, data, from });
+        return;
+      }
       this.channel.send({
         type: 'broadcast',
         event: 'signaling',
@@ -118,6 +143,8 @@ export class RealtimeSignaling {
       supabase.removeChannel(this.channel);
       this.channel = null;
     }
+    this.isSubscribed = false;
+    this.pendingMessages = [];
   }
 }
 
@@ -181,7 +208,10 @@ export class PeerConnectionManager {
   }
 
   // Announce presence in the room
-  announce() {
+  async announce() {
+    // Wait for signaling channel to be subscribed first
+    await this.signaling.waitForSubscription();
+    
     console.log('Announcing presence...');
     this.signaling.send('peer-announce', { senderName: this.localName }, this.localId);
     
