@@ -1,6 +1,6 @@
 // IndexedDB wrapper for offline data storage
 const DB_NAME = 'cya-offline-db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 interface SyncQueueItem {
   id: string;
@@ -53,6 +53,16 @@ const openDB = (): Promise<IDBDatabase> => {
       // Store for profiles
       if (!database.objectStoreNames.contains('profiles')) {
         database.createObjectStore('profiles', { keyPath: 'id' });
+      }
+
+      // Store for bible_games
+      if (!database.objectStoreNames.contains('bible_games')) {
+        database.createObjectStore('bible_games', { keyPath: 'id' });
+      }
+
+      // Store for game_progress
+      if (!database.objectStoreNames.contains('game_progress')) {
+        database.createObjectStore('game_progress', { keyPath: 'id' });
       }
 
       // Store for auth session
