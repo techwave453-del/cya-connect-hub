@@ -69,17 +69,45 @@ export class RealtimeSignaling {
   private pendingMessages: Array<{ type: string; data: any; from: string }> = [];
   private subscribePromise: Promise<void>;
   private resolveSubscribe!: () => void;
+  private subscribeTimeoutId: number | null = null;
+  private retryCount = 0;
+  private closed = false;
 
   constructor(roomId: string, localId: string) {
     this.roomId = roomId;
     this.localId = localId;
-    this.subscribePromise = new Promise((resolve) => {
-      this.resolveSubscribe = resolve;
-    });
+    this.subscribePromise = this.createSubscribePromise();
     this.setupChannel();
   }
 
+  private createSubscribePromise() {
+    return new Promise<void>((resolve) => {
+      this.resolveSubscribe = resolve;
+    });
+  }
+
+  private resetSubscriptionState() {
+    this.isSubscribed = false;
+    this.subscribePromise = this.createSubscribePromise();
+    if (this.subscribeTimeoutId) {
+      window.clearTimeout(this.subscribeTimeoutId);
+      this.subscribeTimeoutId = null;
+    }
+  }
+
+  private teardownChannel() {
+    if (this.channel) {
+      supabase.removeChannel(this.channel);
+      this.channel = null;
+    }
+  }
+
   private setupChannel() {
+    if (this.closed) return;
+
+    // (Re)create subscribe promise each time we set up a channel.
+    this.resetSubscriptionState();
+
     this.channel = supabase.channel(`game-room-${this.roomId}`, {
       config: {
         broadcast: { self: false }
@@ -99,20 +127,59 @@ export class RealtimeSignaling {
       })
       .subscribe((status) => {
         console.log('Signaling channel status:', status);
+
         if (status === 'SUBSCRIBED') {
+          this.retryCount = 0;
           this.isSubscribed = true;
           this.resolveSubscribe();
           // Send any pending messages
-          this.pendingMessages.forEach(msg => {
+          this.pendingMessages.forEach((msg) => {
             this.send(msg.type, msg.data, msg.from);
           });
           this.pendingMessages = [];
+          return;
+        }
+
+        // If realtime fails to subscribe, try recreating the channel.
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          this.retrySubscribe();
         }
       });
+
+    // Safety timeout: some environments never emit TIMED_OUT.
+    this.subscribeTimeoutId = window.setTimeout(() => {
+      if (!this.isSubscribed) {
+        console.warn('Signaling subscribe timeout - retrying');
+        this.retrySubscribe();
+      }
+    }, 7000);
   }
 
-  async waitForSubscription(): Promise<void> {
-    return this.subscribePromise;
+  private retrySubscribe() {
+    if (this.closed) return;
+    if (this.retryCount >= 3) return;
+    this.retryCount += 1;
+
+    const delay = Math.min(500 * Math.pow(2, this.retryCount - 1), 4000);
+    console.warn(`Retrying signaling subscription (attempt ${this.retryCount}) in ${delay}ms`);
+
+    this.teardownChannel();
+    window.setTimeout(() => {
+      this.setupChannel();
+    }, delay);
+  }
+
+  async waitForSubscription(timeoutMs: number = 7000): Promise<void> {
+    // Resolve when subscribed; if it takes too long, trigger retry and continue.
+    await Promise.race([
+      this.subscribePromise,
+      new Promise<void>((resolve) => {
+        window.setTimeout(() => {
+          if (!this.isSubscribed) this.retrySubscribe();
+          resolve();
+        }, timeoutMs);
+      })
+    ]);
   }
 
   send(type: string, data: any, from: string) {
@@ -120,6 +187,8 @@ export class RealtimeSignaling {
       if (!this.isSubscribed) {
         // Queue message if not yet subscribed
         this.pendingMessages.push({ type, data, from });
+        // Nudge a retry in case we're stuck.
+        this.retrySubscribe();
         return;
       }
       this.channel.send({
@@ -139,12 +208,14 @@ export class RealtimeSignaling {
   }
 
   close() {
-    if (this.channel) {
-      supabase.removeChannel(this.channel);
-      this.channel = null;
-    }
+    this.closed = true;
+    this.teardownChannel();
     this.isSubscribed = false;
     this.pendingMessages = [];
+    if (this.subscribeTimeoutId) {
+      window.clearTimeout(this.subscribeTimeoutId);
+      this.subscribeTimeoutId = null;
+    }
   }
 }
 
