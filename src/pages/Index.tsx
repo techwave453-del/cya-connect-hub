@@ -6,6 +6,7 @@ import PostCard from "@/components/PostCard";
 import TaskCard from "@/components/TaskCard";
 import ActivityCard from "@/components/ActivityCard";
 import FloatingActionButton from "@/components/FloatingActionButton";
+ import BibleAIButton from "@/components/BibleAIButton";
 import CreatePostDialog from "@/components/CreatePostDialog";
 import DailyBibleVerse from "@/components/DailyBibleVerse";
 import { useAuth } from "@/hooks/useAuth";
@@ -212,6 +213,7 @@ const Index = () => {
       </main>
       
       <FloatingActionButton />
+     <BibleAIButton />
 
       {/* Create Post Dialog */}
       {user && profile && (

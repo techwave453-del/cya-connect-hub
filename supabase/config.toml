@@ -18,3 +18,6 @@ verify_jwt = true
 
 [functions.generate-game-questions]
 verify_jwt = false
+ 
+ [functions.bible-chat]
+ verify_jwt = false
