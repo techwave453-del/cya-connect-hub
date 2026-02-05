@@ -1,10 +1,12 @@
- import { useState, useRef, useEffect } from 'react';
- import { X, Send, Sparkles, Trash2, BookOpen } from 'lucide-react';
+ import { useState, useRef, useEffect, useCallback } from 'react';
+ import { X, Send, Sparkles, Trash2, BookOpen, Reply, Copy, Check } from 'lucide-react';
+ import ReactMarkdown from 'react-markdown';
  import { Button } from '@/components/ui/button';
  import { Input } from '@/components/ui/input';
  import { ScrollArea } from '@/components/ui/scroll-area';
  import { cn } from '@/lib/utils';
  import { useBibleChat } from '@/hooks/useBibleChat';
+ import { toast } from '@/hooks/use-toast';
  
  interface BibleAIChatProps {
    isOpen: boolean;
@@ -13,6 +15,8 @@
  
  const BibleAIChat = ({ isOpen, onClose }: BibleAIChatProps) => {
    const [input, setInput] = useState('');
+   const [replyTo, setReplyTo] = useState<{ index: number; content: string } | null>(null);
+   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
    const scrollRef = useRef<HTMLDivElement>(null);
    const inputRef = useRef<HTMLInputElement>(null);
    const { messages, isLoading, error, sendMessage, clearChat } = useBibleChat();
@@ -31,8 +35,17 @@
  
    const handleSend = () => {
      if (!input.trim() || isLoading) return;
-     sendMessage(input.trim());
+     
+     // If replying, prepend context
+     let messageToSend = input.trim();
+     if (replyTo) {
+       const excerpt = replyTo.content.slice(0, 150) + (replyTo.content.length > 150 ? '...' : '');
+       messageToSend = `Regarding your previous response: "${excerpt}"\n\nMy follow-up: ${messageToSend}`;
+     }
+     
+     sendMessage(messageToSend);
      setInput('');
+     setReplyTo(null);
    };
  
    const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -40,7 +53,22 @@
        e.preventDefault();
        handleSend();
      }
+     if (e.key === 'Escape' && replyTo) {
+       setReplyTo(null);
+     }
    };
+ 
+   const handleReply = useCallback((index: number, content: string) => {
+     setReplyTo({ index, content });
+     inputRef.current?.focus();
+   }, []);
+ 
+   const handleCopy = useCallback((index: number, content: string) => {
+     navigator.clipboard.writeText(content);
+     setCopiedIndex(index);
+     toast({ title: "Copied to clipboard" });
+     setTimeout(() => setCopiedIndex(null), 2000);
+   }, []);
  
    if (!isOpen) return null;
  
@@ -119,15 +147,51 @@
                      msg.role === 'user' ? "justify-end" : "justify-start"
                    )}
                  >
-                   <div
-                     className={cn(
-                       "max-w-[85%] px-4 py-3 rounded-2xl text-sm",
-                       msg.role === 'user'
-                         ? "bg-primary text-primary-foreground rounded-br-md"
-                         : "bg-muted rounded-bl-md"
+                   <div className="max-w-[85%] group">
+                     <div
+                       className={cn(
+                         "px-4 py-3 rounded-2xl text-sm",
+                         msg.role === 'user'
+                           ? "bg-primary text-primary-foreground rounded-br-md"
+                           : "bg-muted rounded-bl-md"
+                       )}
+                     >
+                       {msg.role === 'assistant' ? (
+                         <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-blockquote:my-2 prose-blockquote:border-primary/50 prose-blockquote:bg-primary/5 prose-blockquote:py-1 prose-blockquote:px-3 prose-blockquote:rounded-r-lg prose-strong:text-primary">
+                           <ReactMarkdown>{msg.content}</ReactMarkdown>
+                         </div>
+                       ) : (
+                         <div className="whitespace-pre-wrap">{msg.content}</div>
+                       )}
+                     </div>
+                     
+                     {/* Action buttons for AI messages */}
+                     {msg.role === 'assistant' && msg.content && (
+                       <div className="flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                         <Button
+                           variant="ghost"
+                           size="sm"
+                           className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                           onClick={() => handleReply(index, msg.content)}
+                         >
+                           <Reply className="w-3 h-3 mr-1" />
+                           Reply
+                         </Button>
+                         <Button
+                           variant="ghost"
+                           size="sm"
+                           className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                           onClick={() => handleCopy(index, msg.content)}
+                         >
+                           {copiedIndex === index ? (
+                            <Check className="w-3 h-3 mr-1 text-primary" />
+                           ) : (
+                             <Copy className="w-3 h-3 mr-1" />
+                           )}
+                           {copiedIndex === index ? 'Copied' : 'Copy'}
+                         </Button>
+                       </div>
                      )}
-                   >
-                     <div className="whitespace-pre-wrap">{msg.content}</div>
                    </div>
                  </div>
                ))}
@@ -153,6 +217,24 @@
            </div>
          )}
  
+         {/* Reply indicator */}
+         {replyTo && (
+           <div className="px-4 py-2 bg-muted/50 border-t border-border flex items-center gap-2">
+             <Reply className="w-4 h-4 text-primary shrink-0" />
+             <p className="text-xs text-muted-foreground truncate flex-1">
+               Replying: {replyTo.content.slice(0, 60)}...
+             </p>
+             <Button
+               variant="ghost"
+               size="sm"
+               className="h-6 w-6 p-0"
+               onClick={() => setReplyTo(null)}
+             >
+               <X className="w-3 h-3" />
+             </Button>
+           </div>
+         )}
+ 
          {/* Input */}
          <div className="p-4 border-t border-border">
            <div className="flex gap-2">
@@ -161,7 +243,7 @@
                value={input}
                onChange={(e) => setInput(e.target.value)}
                onKeyDown={handleKeyDown}
-               placeholder="Ask about the Bible..."
+               placeholder={replyTo ? "Type your follow-up..." : "Ask about the Bible..."}
                className="flex-1"
                disabled={isLoading}
              />
