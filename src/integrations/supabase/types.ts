@@ -562,6 +562,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      delete_old_bible_questions: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
