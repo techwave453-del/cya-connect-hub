@@ -156,10 +156,10 @@
                            : "bg-muted rounded-bl-md"
                        )}
                      >
-                       {msg.role === 'assistant' ? (
-                         <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-blockquote:my-2 prose-blockquote:border-primary/50 prose-blockquote:bg-primary/5 prose-blockquote:py-1 prose-blockquote:px-3 prose-blockquote:rounded-r-lg prose-strong:text-primary">
-                           <ReactMarkdown>{msg.content}</ReactMarkdown>
-                         </div>
+                        {msg.role === 'assistant' ? (
+                          <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-p:leading-relaxed prose-headings:font-semibold prose-headings:text-foreground prose-h1:text-lg prose-h1:mt-4 prose-h1:mb-2 prose-h2:text-base prose-h2:mt-3 prose-h2:mb-2 prose-h3:text-sm prose-h3:mt-2 prose-h3:mb-1 prose-ul:my-2 prose-ul:pl-4 prose-ol:my-2 prose-ol:pl-4 prose-li:my-1 prose-li:leading-relaxed prose-blockquote:my-3 prose-blockquote:border-l-4 prose-blockquote:border-primary/60 prose-blockquote:bg-primary/10 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r-xl prose-blockquote:font-medium prose-strong:text-primary prose-strong:font-semibold prose-em:text-primary/80 prose-code:text-xs prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-a:text-primary prose-a:underline prose-a:underline-offset-2">
+                            <ReactMarkdown>{msg.content}</ReactMarkdown>
+                          </div>
                        ) : (
                          <div className="whitespace-pre-wrap">{msg.content}</div>
                        )}
