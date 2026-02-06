@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Pencil, Trash2, Loader2, Save, X, Sparkles, Wand2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Save, X, Sparkles, Wand2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,6 +21,10 @@ const AdminGameManagement = () => {
   const [saving, setSaving] = useState(false);
   const [generateCount, setGenerateCount] = useState(3);
   const { generateQuestions, isGenerating } = useQuestionGenerator();
+  
+  // Cleanup settings state
+  const [cleanupDays, setCleanupDays] = useState(3);
+  const [savingCleanup, setSavingCleanup] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -67,7 +71,52 @@ const AdminGameManagement = () => {
 
   useEffect(() => {
     fetchGames();
+    fetchCleanupSettings();
   }, []);
+
+  const fetchCleanupSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'bible_questions_cleanup_age')
+        .maybeSingle();
+
+      if (data?.value && typeof data.value === 'object' && 'days' in data.value) {
+        setCleanupDays((data.value as { days: number }).days);
+      }
+    } catch (error) {
+      console.error('Error fetching cleanup settings:', error);
+    }
+  };
+
+  const handleSaveCleanupSettings = async () => {
+    setSavingCleanup(true);
+    try {
+      const { error } = await supabase
+        .from('app_settings')
+        .upsert({
+          key: 'bible_questions_cleanup_age',
+          value: { days: cleanupDays }
+        }, { onConflict: 'key' });
+
+      if (error) throw error;
+
+      toast({
+        title: "Saved",
+        description: `Questions older than ${cleanupDays} days will be auto-deleted`
+      });
+    } catch (error) {
+      console.error('Error saving cleanup settings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save cleanup settings",
+        variant: "destructive"
+      });
+    } finally {
+      setSavingCleanup(false);
+    }
+  };
 
   const resetForm = () => {
     setFormData({
@@ -277,6 +326,55 @@ const AdminGameManagement = () => {
               AI is generating {generateCount} new questions...
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Auto-Cleanup Settings */}
+      <Card className="bg-card border-border">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Clock className="w-5 h-5 text-muted-foreground" />
+            Auto-Cleanup Settings
+          </CardTitle>
+          <CardDescription>
+            Automatically delete old questions to keep the game content fresh
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <Label className="whitespace-nowrap">Delete questions older than:</Label>
+            <Select
+              value={cleanupDays.toString()}
+              onValueChange={(value) => setCleanupDays(parseInt(value))}
+            >
+              <SelectTrigger className="w-28">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1 day</SelectItem>
+                <SelectItem value="3">3 days</SelectItem>
+                <SelectItem value="5">5 days</SelectItem>
+                <SelectItem value="7">7 days</SelectItem>
+                <SelectItem value="14">14 days</SelectItem>
+                <SelectItem value="30">30 days</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button 
+              onClick={handleSaveCleanupSettings} 
+              disabled={savingCleanup}
+              size="sm"
+            >
+              {savingCleanup ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-1" />
+              )}
+              Save
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Cleanup runs automatically every day at midnight
+          </p>
         </CardContent>
       </Card>
 
