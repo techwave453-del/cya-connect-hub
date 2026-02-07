@@ -138,75 +138,109 @@
                </div>
              </div>
            ) : (
-             <div className="space-y-4 py-4">
-               {messages.map((msg, index) => (
-                 <div
-                   key={index}
-                   className={cn(
-                     "flex",
-                     msg.role === 'user' ? "justify-end" : "justify-start"
-                   )}
-                 >
-                   <div className="max-w-[85%] group">
-                    <div
-                      className={cn(
-                        "px-4 py-3 rounded-2xl text-sm leading-relaxed",
-                        msg.role === 'user'
-                          ? "bg-primary text-primary-foreground rounded-br-md"
-                          : "bg-muted rounded-bl-md"
-                      )}
-                    >
-                      {msg.role === 'assistant' ? (
-                        <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-3 prose-p:leading-relaxed prose-headings:font-semibold prose-headings:text-foreground prose-h1:text-lg prose-h1:mt-6 prose-h1:mb-3 prose-h2:text-base prose-h2:mt-5 prose-h2:mb-3 prose-h3:text-sm prose-h3:mt-4 prose-h3:mb-2 prose-ul:my-3 prose-ul:pl-5 prose-ol:my-3 prose-ol:pl-5 prose-li:my-1.5 prose-li:leading-relaxed prose-blockquote:my-4 prose-blockquote:border-l-4 prose-blockquote:border-primary/60 prose-blockquote:bg-primary/10 prose-blockquote:py-3 prose-blockquote:px-4 prose-blockquote:rounded-r-xl prose-blockquote:font-medium prose-strong:text-primary prose-strong:font-semibold prose-em:text-primary/80 prose-code:text-xs prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-a:text-primary prose-a:underline prose-a:underline-offset-2">
-                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+              <div className="space-y-4 py-4">
+                {messages.map((msg, index) => (
+                  <div
+                    key={index}
+                    className={cn(
+                      "flex",
+                      msg.role === 'user' ? "justify-end" : "justify-start"
+                    )}
+                  >
+                    <div className="max-w-[85%] group">
+                      {msg.role === 'assistant' && (
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                            <BookOpen className="w-3 h-3 text-primary" />
+                          </div>
+                          <span className="text-xs font-medium text-muted-foreground">Scripture Guide</span>
                         </div>
-                       ) : (
-                         <div className="whitespace-pre-wrap">{msg.content}</div>
-                       )}
-                     </div>
-                     
-                     {/* Action buttons for AI messages */}
-                     {msg.role === 'assistant' && msg.content && (
-                       <div className="flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                         <Button
-                           variant="ghost"
-                           size="sm"
-                           className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-                           onClick={() => handleReply(index, msg.content)}
-                         >
-                           <Reply className="w-3 h-3 mr-1" />
-                           Reply
-                         </Button>
-                         <Button
-                           variant="ghost"
-                           size="sm"
-                           className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-                           onClick={() => handleCopy(index, msg.content)}
-                         >
-                           {copiedIndex === index ? (
-                            <Check className="w-3 h-3 mr-1 text-primary" />
-                           ) : (
-                             <Copy className="w-3 h-3 mr-1" />
-                           )}
-                           {copiedIndex === index ? 'Copied' : 'Copy'}
-                         </Button>
-                       </div>
-                     )}
-                   </div>
-                 </div>
-               ))}
-               {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
-                 <div className="flex justify-start">
-                   <div className="bg-muted px-4 py-3 rounded-2xl rounded-bl-md">
-                     <div className="flex items-center gap-1">
-                       <span className="w-2 h-2 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                       <span className="w-2 h-2 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                       <span className="w-2 h-2 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                     </div>
-                   </div>
-                 </div>
-               )}
-             </div>
+                      )}
+                      <div
+                        className={cn(
+                          "text-sm leading-relaxed",
+                          msg.role === 'user'
+                            ? "bg-primary text-primary-foreground px-4 py-3 rounded-2xl rounded-br-md"
+                            : "bg-gradient-to-br from-muted/80 to-muted border border-border/50 px-4 py-4 rounded-2xl rounded-tl-md shadow-sm"
+                        )}
+                      >
+                        {msg.role === 'assistant' ? (
+                          <div className="prose prose-sm dark:prose-invert max-w-none 
+                            prose-p:my-2.5 prose-p:leading-relaxed prose-p:text-foreground/90
+                            prose-headings:font-semibold prose-headings:text-foreground 
+                            prose-h1:text-base prose-h1:mt-5 prose-h1:mb-2 prose-h1:pb-1 prose-h1:border-b prose-h1:border-border/50
+                            prose-h2:text-sm prose-h2:mt-4 prose-h2:mb-2 prose-h2:text-primary
+                            prose-h3:text-sm prose-h3:mt-3 prose-h3:mb-1.5 prose-h3:font-medium
+                            prose-ul:my-2.5 prose-ul:pl-4 prose-ul:space-y-1
+                            prose-ol:my-2.5 prose-ol:pl-4 prose-ol:space-y-1
+                            prose-li:my-0 prose-li:leading-relaxed prose-li:text-foreground/90
+                            prose-blockquote:my-3 prose-blockquote:border-l-3 prose-blockquote:border-primary 
+                            prose-blockquote:bg-primary/5 prose-blockquote:py-2 prose-blockquote:px-4 
+                            prose-blockquote:rounded-r-lg prose-blockquote:italic prose-blockquote:text-foreground/80
+                            prose-strong:text-primary prose-strong:font-semibold 
+                            prose-em:text-foreground/70 prose-em:not-italic prose-em:font-medium
+                            prose-code:text-xs prose-code:bg-background prose-code:border prose-code:border-border/50 
+                            prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-mono prose-code:text-primary
+                            prose-a:text-primary prose-a:underline prose-a:underline-offset-2 prose-a:decoration-primary/50
+                            prose-hr:my-4 prose-hr:border-border/50">
+                            <ReactMarkdown>{msg.content}</ReactMarkdown>
+                          </div>
+                        ) : (
+                          <div className="whitespace-pre-wrap">{msg.content}</div>
+                        )}
+                      </div>
+                      
+                      {/* Action buttons for AI messages */}
+                      {msg.role === 'assistant' && msg.content && (
+                        <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/80 rounded-lg"
+                            onClick={() => handleReply(index, msg.content)}
+                          >
+                            <Reply className="w-3.5 h-3.5 mr-1.5" />
+                            Reply
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/80 rounded-lg"
+                            onClick={() => handleCopy(index, msg.content)}
+                          >
+                            {copiedIndex === index ? (
+                              <Check className="w-3.5 h-3.5 mr-1.5 text-primary" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5 mr-1.5" />
+                            )}
+                            {copiedIndex === index ? 'Copied!' : 'Copy'}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
+                  <div className="flex justify-start">
+                    <div className="max-w-[85%]">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                          <BookOpen className="w-3 h-3 text-primary" />
+                        </div>
+                        <span className="text-xs font-medium text-muted-foreground">Scripture Guide</span>
+                      </div>
+                      <div className="bg-gradient-to-br from-muted/80 to-muted border border-border/50 px-4 py-4 rounded-2xl rounded-tl-md shadow-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+                          <span className="w-2 h-2 bg-primary/70 rounded-full animate-pulse" style={{ animationDelay: '150ms' }} />
+                          <span className="w-2 h-2 bg-primary/40 rounded-full animate-pulse" style={{ animationDelay: '300ms' }} />
+                          <span className="text-xs text-muted-foreground ml-1">Searching scriptures...</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
            )}
          </ScrollArea>
  
