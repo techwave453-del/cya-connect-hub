@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Pencil, Trash2, Loader2, Save, X, Sparkles, Wand2, Clock } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Save, X, Sparkles, Wand2, Clock, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,7 +25,7 @@ const AdminGameManagement = () => {
   // Cleanup settings state
   const [cleanupDays, setCleanupDays] = useState(3);
   const [savingCleanup, setSavingCleanup] = useState(false);
-
+  const [runningCleanup, setRunningCleanup] = useState(false);
   // Form state
   const [formData, setFormData] = useState({
     game_type: 'trivia' as BibleGame['game_type'],
@@ -115,6 +115,30 @@ const AdminGameManagement = () => {
       });
     } finally {
       setSavingCleanup(false);
+    }
+  };
+
+  const handleRunCleanup = async () => {
+    setRunningCleanup(true);
+    try {
+      const { error } = await supabase.rpc('delete_old_bible_questions');
+
+      if (error) throw error;
+
+      toast({
+        title: "Cleanup Complete",
+        description: "Old questions have been deleted"
+      });
+      fetchGames();
+    } catch (error) {
+      console.error('Error running cleanup:', error);
+      toast({
+        title: "Error",
+        description: "Failed to run cleanup",
+        variant: "destructive"
+      });
+    } finally {
+      setRunningCleanup(false);
     }
   };
 
@@ -370,6 +394,19 @@ const AdminGameManagement = () => {
                 <Save className="w-4 h-4 mr-1" />
               )}
               Save
+            </Button>
+            <Button 
+              onClick={handleRunCleanup} 
+              disabled={runningCleanup}
+              size="sm"
+              variant="outline"
+            >
+              {runningCleanup ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Play className="w-4 h-4 mr-1" />
+              )}
+              Run Now
             </Button>
           </div>
           <p className="text-xs text-muted-foreground mt-2">
