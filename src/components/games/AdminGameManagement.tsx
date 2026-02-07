@@ -364,52 +364,54 @@ const AdminGameManagement = () => {
             Automatically delete old questions to keep the game content fresh
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <Label className="whitespace-nowrap">Delete questions older than:</Label>
-            <Select
-              value={cleanupDays.toString()}
-              onValueChange={(value) => setCleanupDays(parseInt(value))}
-            >
-              <SelectTrigger className="w-28">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">1 day</SelectItem>
-                <SelectItem value="3">3 days</SelectItem>
-                <SelectItem value="5">5 days</SelectItem>
-                <SelectItem value="7">7 days</SelectItem>
-                <SelectItem value="14">14 days</SelectItem>
-                <SelectItem value="30">30 days</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button 
-              onClick={handleSaveCleanupSettings} 
-              disabled={savingCleanup}
-              size="sm"
-            >
-              {savingCleanup ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4 mr-1" />
-              )}
-              Save
-            </Button>
-            <Button 
-              onClick={handleRunCleanup} 
-              disabled={runningCleanup}
-              size="sm"
-              variant="outline"
-            >
-              {runningCleanup ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Play className="w-4 h-4 mr-1" />
-              )}
-              Run Now
-            </Button>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <Label className="text-sm">Delete questions older than:</Label>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Select
+                value={cleanupDays.toString()}
+                onValueChange={(value) => setCleanupDays(parseInt(value))}
+              >
+                <SelectTrigger className="w-28">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1 day</SelectItem>
+                  <SelectItem value="3">3 days</SelectItem>
+                  <SelectItem value="5">5 days</SelectItem>
+                  <SelectItem value="7">7 days</SelectItem>
+                  <SelectItem value="14">14 days</SelectItem>
+                  <SelectItem value="30">30 days</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button 
+                onClick={handleSaveCleanupSettings} 
+                disabled={savingCleanup}
+                size="sm"
+              >
+                {savingCleanup ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 mr-1" />
+                )}
+                Save
+              </Button>
+              <Button 
+                onClick={handleRunCleanup} 
+                disabled={runningCleanup}
+                size="sm"
+                variant="outline"
+              >
+                {runningCleanup ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Play className="w-4 h-4 mr-1" />
+                )}
+                Run Now
+              </Button>
+            </div>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">
+          <p className="text-xs text-muted-foreground">
             Cleanup runs automatically every day at midnight
           </p>
         </CardContent>
