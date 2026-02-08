@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
+import { User } from '@supabase/supabase-js';
 
 export interface SavedChat {
   id: string;
@@ -11,10 +11,9 @@ export interface SavedChat {
   updated_at: string;
 }
 
-export const useSavedChats = () => {
+export const useSavedChats = (user: User | null) => {
   const [savedChats, setSavedChats] = useState<SavedChat[]>([]);
   const [loading, setLoading] = useState(false);
-  const { user } = useAuth();
 
   const fetchSavedChats = useCallback(async () => {
     if (!user) return;

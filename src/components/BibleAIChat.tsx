@@ -32,8 +32,8 @@ const BibleAIChat = ({ isOpen, onClose }: BibleAIChatProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { messages, isLoading, error, sendMessage, clearChat, loadMessages } = useBibleChat();
-  const { savedChats, loading: loadingSaved, saveChat, deleteChat } = useSavedChats();
   const { user } = useAuth();
+  const { savedChats, loading: loadingSaved, saveChat, deleteChat } = useSavedChats(user);
 
   useEffect(() => {
     if (scrollRef.current) {
