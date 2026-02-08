@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
-type GameType = "trivia" | "guess_character";
+type GameType = "trivia" | "guess_character" | "fill_blank" | "memory_verse";
 
 interface GenerateResult {
   success: boolean;
@@ -72,9 +72,16 @@ export const useQuestionGenerator = () => {
 
       console.log(`Successfully generated ${data.generated} questions`);
       
+      const gameTypeLabels: Record<GameType, string> = {
+        trivia: "trivia",
+        guess_character: "character",
+        fill_blank: "fill in the blank",
+        memory_verse: "memory verse"
+      };
+      
       toast({
         title: "New Questions Added! 📚",
-        description: `${data.generated} new ${gameType === "trivia" ? "trivia" : "character"} questions have been added.`,
+        description: `${data.generated} new ${gameTypeLabels[gameType]} questions have been added.`,
       });
 
       return data as GenerateResult;

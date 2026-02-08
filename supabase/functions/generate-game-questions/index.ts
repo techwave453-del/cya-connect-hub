@@ -52,26 +52,64 @@ serve(async (req) => {
       ?.map((q) => `- ${q.question} (Answer: ${q.correct_answer})`)
       .join("\n") || "None";
 
-    const systemPrompt = game_type === "trivia" 
-      ? `You are a Bible trivia expert. Generate unique, engaging Bible trivia questions that test knowledge of the Holy Bible. 
+    let systemPrompt = "";
+    
+    if (game_type === "trivia") {
+      systemPrompt = `You are a Bible trivia expert. Generate unique, engaging Bible trivia questions that test knowledge of the Holy Bible. 
          Each question should have exactly 4 answer options with one correct answer.
          Include questions from both Old and New Testament.
          Vary difficulty levels: easy (basic facts), medium (requires familiarity), hard (deep knowledge).
          Always include the specific Bible verse reference where the answer can be found.
-         Make questions educational and suitable for Christian fellowship groups.`
-      : `You are a Bible character expert. Generate "Guess the Character" questions where players identify biblical figures from clues.
+         Make questions educational and suitable for Christian fellowship groups.`;
+    } else if (game_type === "guess_character") {
+      systemPrompt = `You are a Bible character expert. Generate "Guess the Character" questions where players identify biblical figures from clues.
          Each question should have 3-4 clues that progressively reveal more about the character.
          Format clues as: "Clue 1: [first clue]\\nClue 2: [second clue]\\nClue 3: [third clue]"
          Include both major and minor biblical characters.
          Provide 4 character name options for the answer.
          Always include a Bible verse reference where this character appears.`;
+    } else if (game_type === "fill_blank") {
+      systemPrompt = `You are a Bible verse expert. Generate "Fill in the Blank" questions where players complete famous Bible verses.
+         Format the question as: "Complete the verse: '[verse with _____ for missing word(s)]'"
+         The blank should replace 1-3 meaningful words (not common words like 'the', 'and', 'a').
+         The correct_answer should be the missing word(s) only.
+         Provide 4 options including the correct answer and 3 plausible alternatives.
+         Use well-known, impactful verses that Christians commonly memorize.
+         Always include the specific Bible verse reference.
+         The hint should help recall the verse without giving away the answer.`;
+    } else if (game_type === "memory_verse") {
+      systemPrompt = `You are a Bible memorization expert. Generate Memory Verse challenges for Scripture memorization.
+         The question field should describe the verse topic/theme briefly (e.g., "God's love for the world" or "The Lord's guidance").
+         The correct_answer field should contain the COMPLETE verse text that players will memorize and arrange.
+         Keep verses to 15-30 words for manageable memorization.
+         Select impactful, commonly memorized verses.
+         Provide 4 options with similar verse themes (these are for display, the game uses word arrangement).
+         Always include the specific Bible verse reference.
+         The hint should describe the key message or theme of the verse.`;
+    }
 
-    const userPrompt = `Generate ${count} unique ${game_type === "trivia" ? "Bible trivia" : "Guess the Character"} questions.
+    const gameTypeLabels: Record<string, string> = {
+      trivia: "Bible trivia",
+      guess_character: "Guess the Character",
+      fill_blank: "Fill in the Blank",
+      memory_verse: "Memory Verse"
+    };
+    
+    const userPrompt = `Generate ${count} unique ${gameTypeLabels[game_type] || game_type} questions.
 
 EXISTING QUESTIONS TO AVOID (do not repeat these topics or characters):
 ${existingQuestionsText}
 
 Return the response using the generate_questions function.`;
+
+    let questionDescription = "The trivia question";
+    if (game_type === "guess_character") {
+      questionDescription = "The clues formatted as 'Clue 1: [text]\\nClue 2: [text]\\nClue 3: [text]'";
+    } else if (game_type === "fill_blank") {
+      questionDescription = "The verse with blank(s) as 'Complete the verse: [verse with _____ for missing word(s)]'";
+    } else if (game_type === "memory_verse") {
+      questionDescription = "A brief description of the verse topic/theme";
+    }
 
     const tools = [
       {
@@ -89,9 +127,7 @@ Return the response using the generate_questions function.`;
                   properties: {
                     question: { 
                       type: "string", 
-                      description: game_type === "trivia" 
-                        ? "The trivia question"
-                        : "The clues formatted as 'Clue 1: [text]\\nClue 2: [text]\\nClue 3: [text]'"
+                      description: questionDescription
                     },
                     options: { 
                       type: "array", 

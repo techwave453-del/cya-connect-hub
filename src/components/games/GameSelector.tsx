@@ -53,16 +53,16 @@ const games: Game[] = [
     title: 'Fill in the Blank',
     description: 'Complete famous Bible verses',
     icon: <PenTool className="w-8 h-8" />,
-    available: false,
-    color: 'from-green-500/20 to-green-600/10'
+    available: true,
+    color: 'from-emerald-500/20 to-emerald-600/10'
   },
   {
     id: 'memory_verse',
     title: 'Memory Verses',
     description: 'Practice and recall key Scripture',
     icon: <Brain className="w-8 h-8" />,
-    available: false,
-    color: 'from-amber-500/20 to-amber-600/10'
+    available: true,
+    color: 'from-pink-500/20 to-pink-600/10'
   }
 ];
 

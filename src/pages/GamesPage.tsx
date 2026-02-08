@@ -7,6 +7,8 @@ import GameSelector from "@/components/games/GameSelector";
 import BibleTrivia from "@/components/games/BibleTrivia";
 import GuessCharacter from "@/components/games/GuessCharacter";
 import DailyChallenge from "@/components/games/DailyChallenge";
+import FillInTheBlank from "@/components/games/FillInTheBlank";
+import MemoryVerse from "@/components/games/MemoryVerse";
 import FloatingLeaderboard from "@/components/games/FloatingLeaderboard";
 import MultiplayerMode from "@/components/games/multiplayer/MultiplayerMode";
 import { useOffline } from "@/contexts/OfflineContext";
@@ -45,6 +47,10 @@ const GamesPage = () => {
         return <GuessCharacter onGameEnd={() => {}} />;
       case 'daily_challenge':
         return <DailyChallenge onGameEnd={() => {}} />;
+      case 'fill_blank':
+        return <FillInTheBlank onGameEnd={() => {}} />;
+      case 'memory_verse':
+        return <MemoryVerse onGameEnd={() => {}} />;
       case 'multiplayer':
         return <MultiplayerMode onBack={() => setSelectedGame(null)} />;
       default:
