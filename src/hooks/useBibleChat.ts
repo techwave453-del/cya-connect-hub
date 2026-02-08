@@ -114,10 +114,15 @@
      }
    }, [messages, isLoading]);
  
-   const clearChat = useCallback(() => {
-     setMessages([]);
-     setError(null);
-   }, []);
- 
-   return { messages, isLoading, error, sendMessage, clearChat };
- };
+    const clearChat = useCallback(() => {
+      setMessages([]);
+      setError(null);
+    }, []);
+
+    const loadMessages = useCallback((msgs: Message[]) => {
+      setMessages(msgs);
+      setError(null);
+    }, []);
+
+    return { messages, isLoading, error, sendMessage, clearChat, loadMessages };
+  };
