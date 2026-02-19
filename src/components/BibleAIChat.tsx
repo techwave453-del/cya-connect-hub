@@ -48,6 +48,16 @@ const enrichContentWithIcons = (content: string): string => {
   return enriched;
 };
 
+// Helper function to generate story-specific sample questions
+const generateStoryQuestions = (storyTitle: string, refs: string[]): string[] => {
+  const mainRef = refs[0] || 'Scripture';
+  return [
+    `What can I learn from the story of ${storyTitle}?`,
+    `How does ${mainRef} apply to my life today?`,
+    `What is the deeper spiritual meaning of ${storyTitle}?`,
+  ];
+};
+
 interface BibleAIChatProps {
   isOpen: boolean;
   onClose: () => void;
@@ -283,7 +293,7 @@ const BibleAIChat = ({ isOpen, onClose }: BibleAIChatProps) => {
 
   // Auto-shuffle if user does not click Read More within a short delay
   useEffect(() => {
-    const AUTO_DELAY = 10000; // 10 seconds
+    const AUTO_DELAY = 30000; // 30 seconds
     if (readMoreClicked) return;
 
     const id = window.setTimeout(() => {
@@ -492,7 +502,7 @@ const BibleAIChat = ({ isOpen, onClose }: BibleAIChatProps) => {
         ) : (
           <>
             {/* Messages */}
-            <ScrollArea className="flex-1 px-4" ref={scrollRef}>
+            <ScrollArea className="flex-1 min-h-0 px-4" ref={scrollRef}>
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full py-8 text-center">
                   <Sparkles className="w-12 h-12 text-primary/50 mb-4" />
@@ -586,7 +596,10 @@ const BibleAIChat = ({ isOpen, onClose }: BibleAIChatProps) => {
                   <div className="mt-4 space-y-2">
                     <p className="text-xs text-muted-foreground">Try asking:</p>
                     <div className="flex flex-wrap gap-2 justify-center">
-                      {['What does John 3:16 mean?', 'How can I overcome fear?', 'Who was David?'].map((q) => (
+                      {generateStoryQuestions(
+                        BIBLE_STORIES[storyOrder[currentStoryIdx]]?.title || 'this story',
+                        BIBLE_STORIES[storyOrder[currentStoryIdx]]?.refs || []
+                      ).map((q) => (
                         <button
                           key={q}
                           onClick={() => {
@@ -602,7 +615,7 @@ const BibleAIChat = ({ isOpen, onClose }: BibleAIChatProps) => {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-4 py-4">
+                <div className="space-y-4 py-4 w-full">
                   {messages.map((msg, index) => (
                     <div
                       key={index}
@@ -625,34 +638,34 @@ const BibleAIChat = ({ isOpen, onClose }: BibleAIChatProps) => {
                             "text-sm leading-relaxed",
                             msg.role === 'user'
                               ? "bg-primary text-primary-foreground px-4 py-3 rounded-2xl rounded-br-md"
-                              : "bg-gradient-to-br from-muted/80 to-muted border border-border/50 px-4 py-4 rounded-2xl rounded-tl-md shadow-sm"
+                              : "bg-gradient-to-br from-muted/80 to-muted border border-border/50 px-4 py-4 rounded-2xl rounded-tl-md shadow-sm max-h-[60vh] overflow-y-auto"
                           )}
                         >
                           {msg.role === 'assistant' ? (
-                            <div className="prose prose-sm dark:prose-invert max-w-none 
-                              prose-p:my-3 prose-p:leading-relaxed prose-p:text-foreground
-                              prose-headings:font-bold prose-headings:text-foreground 
+                            <div className="prose prose-sm dark:prose-invert max-w-none overflow-hidden
+                              prose-p:my-3 prose-p:leading-relaxed prose-p:text-foreground prose-p:break-words
+                              prose-headings:font-bold prose-headings:text-foreground prose-headings:break-words
                               prose-h1:text-lg prose-h1:mt-6 prose-h1:mb-3 prose-h1:pb-2 prose-h1:border-b-2 prose-h1:border-primary/30 prose-h1:bg-gradient-to-r prose-h1:from-primary/10 prose-h1:to-transparent prose-h1:px-3 prose-h1:py-2 prose-h1:rounded-lg
                               prose-h2:text-base prose-h2:mt-5 prose-h2:mb-3 prose-h2:text-primary prose-h2:bg-primary/5 prose-h2:px-3 prose-h2:py-1 prose-h2:rounded-md
                               prose-h3:text-sm prose-h3:mt-4 prose-h3:mb-2 prose-h3:text-primary/90 prose-h3:font-semibold
                               prose-ul:my-3 prose-ul:pl-5 prose-ul:space-y-2 prose-ul:marker:text-primary prose-ul:marker:font-bold
                               prose-ol:my-3 prose-ol:pl-5 prose-ol:space-y-2 prose-ol:marker:text-primary prose-ol:marker:font-semibold
-                              prose-li:my-1 prose-li:leading-relaxed prose-li:text-foreground
+                              prose-li:my-1 prose-li:leading-relaxed prose-li:text-foreground prose-li:break-words
                               prose-li:marker:mr-2
                               prose-blockquote:my-4 prose-blockquote:border-l-4 prose-blockquote:border-primary 
                               prose-blockquote:bg-gradient-to-r prose-blockquote:from-primary/10 prose-blockquote:to-primary/5 
                               prose-blockquote:py-3 prose-blockquote:px-4 prose-blockquote:rounded-r-lg 
-                              prose-blockquote:italic prose-blockquote:text-foreground prose-blockquote:shadow-sm
+                              prose-blockquote:italic prose-blockquote:text-foreground prose-blockquote:shadow-sm prose-blockquote:break-words
                               prose-strong:text-primary prose-strong:font-bold 
                               prose-em:text-primary/80 prose-em:not-italic prose-em:font-semibold prose-em:px-1 prose-em:py-0.5 prose-em:bg-primary/10 prose-em:rounded
                               prose-code:text-xs prose-code:bg-background/80 prose-code:border prose-code:border-primary/30 
-                              prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:font-mono prose-code:text-primary prose-code:font-semibold
-                              prose-pre:bg-background/60 prose-pre:border prose-pre:border-primary/20 prose-pre:rounded-lg prose-pre:shadow-md
-                              prose-a:text-primary prose-a:font-semibold prose-a:underline prose-a:underline-offset-2 prose-a:decoration-primary/40 hover:prose-a:decoration-primary
+                              prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:font-mono prose-code:text-primary prose-code:font-semibold prose-code:break-words
+                              prose-pre:bg-background/60 prose-pre:border prose-pre:border-primary/20 prose-pre:rounded-lg prose-pre:shadow-md prose-pre:overflow-x-auto
+                              prose-a:text-primary prose-a:font-semibold prose-a:underline prose-a:underline-offset-2 prose-a:decoration-primary/40 hover:prose-a:decoration-primary prose-a:break-words
                               prose-hr:my-5 prose-hr:border-primary/20 prose-hr:border-t-2
-                              prose-table:my-4 prose-table:border-collapse prose-table:w-full
-                              prose-th:bg-primary/15 prose-th:text-foreground prose-th:font-bold prose-th:border prose-th:border-primary/20 prose-th:px-3 prose-th:py-2
-                              prose-td:border prose-td:border-primary/10 prose-td:px-3 prose-td:py-2 prose-td:text-foreground">
+                              prose-table:my-4 prose-table:border-collapse prose-table:w-full prose-table:table-auto
+                              prose-th:bg-primary/15 prose-th:text-foreground prose-th:font-bold prose-th:border prose-th:border-primary/20 prose-th:px-3 prose-th:py-2 prose-th:break-words
+                              prose-td:border prose-td:border-primary/10 prose-td:px-3 prose-td:py-2 prose-td:text-foreground prose-td:break-words">
                               <ReactMarkdown>{enrichContentWithIcons(msg.content)}</ReactMarkdown>
                             </div>
                           ) : (
