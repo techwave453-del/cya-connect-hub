@@ -1,0 +1,123 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 25% 10%;
+    --foreground: 45 100% 96%;
+
+    --card: 220 20% 14%;
+    --card-foreground: 45 100% 96%;
+
+    --popover: 220 20% 14%;
+    --popover-foreground: 45 100% 96%;
+
+    --primary: 45 100% 50%;
+    --primary-foreground: 220 25% 10%;
+
+    --secondary: 220 15% 20%;
+    --secondary-foreground: 45 100% 96%;
+
+    --muted: 220 15% 18%;
+    --muted-foreground: 220 10% 60%;
+
+    --accent: 45 100% 50%;
+    --accent-foreground: 220 25% 10%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 45 100% 96%;
+
+    --border: 220 15% 22%;
+    --input: 220 15% 22%;
+    --ring: 45 100% 50%;
+
+    --radius: 0.75rem;
+
+    /* Custom tokens */
+    --gold: 45 100% 50%;
+    --gold-light: 45 100% 65%;
+    --gold-dark: 45 100% 40%;
+    --navy: 220 25% 10%;
+    --navy-light: 220 20% 16%;
+    --navy-lighter: 220 15% 22%;
+
+    /* Shadows */
+    --shadow-glow: 0 0 20px hsl(45 100% 50% / 0.3);
+    --shadow-card: 0 4px 20px hsl(0 0% 0% / 0.3);
+
+    --sidebar-background: 220 20% 14%;
+    --sidebar-foreground: 45 100% 96%;
+    --sidebar-primary: 45 100% 50%;
+    --sidebar-primary-foreground: 220 25% 10%;
+    --sidebar-accent: 220 15% 20%;
+    --sidebar-accent-foreground: 45 100% 96%;
+    --sidebar-border: 220 15% 22%;
+    --sidebar-ring: 45 100% 50%;
+  }
+
+  .dark {
+    --background: 220 25% 10%;
+    --foreground: 45 100% 96%;
+    --card: 220 20% 14%;
+    --card-foreground: 45 100% 96%;
+    --popover: 220 20% 14%;
+    --popover-foreground: 45 100% 96%;
+    --primary: 45 100% 50%;
+    --primary-foreground: 220 25% 10%;
+    --secondary: 220 15% 20%;
+    --secondary-foreground: 45 100% 96%;
+    --muted: 220 15% 18%;
+    --muted-foreground: 220 10% 60%;
+    --accent: 45 100% 50%;
+    --accent-foreground: 220 25% 10%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 45 100% 96%;
+    --border: 220 15% 22%;
+    --input: 220 15% 22%;
+    --ring: 45 100% 50%;
+    --sidebar-background: 220 20% 14%;
+    --sidebar-foreground: 45 100% 96%;
+    --sidebar-primary: 45 100% 50%;
+    --sidebar-primary-foreground: 220 25% 10%;
+    --sidebar-accent: 220 15% 20%;
+    --sidebar-accent-foreground: 45 100% 96%;
+    --sidebar-border: 220 15% 22%;
+    --sidebar-ring: 45 100% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', sans-serif;
+  }
+}
+
+@layer utilities {
+  .text-gradient-gold {
+    @apply bg-gradient-to-r from-[hsl(var(--gold-light))] via-[hsl(var(--gold))] to-[hsl(var(--gold-dark))] bg-clip-text text-transparent;
+  }
+
+  .bg-gradient-gold {
+    @apply bg-gradient-to-r from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))];
+  }
+
+  .glow-gold {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .card-shadow {
+    box-shadow: var(--shadow-card);
+  }
+}

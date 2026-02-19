@@ -1,0 +1,227 @@
+import { useState, useEffect } from 'react';
+import { ArrowLeft, Plus, Users, Wifi, Bluetooth, WifiOff } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { useLocalMultiplayer } from '@/hooks/useLocalMultiplayer';
+import { useBibleGames, BibleGame } from '@/hooks/useBibleGames';
+import GameLobby from './GameLobby';
+import CreateRoomDialog from './CreateRoomDialog';
+import JoinRoomDialog from './JoinRoomDialog';
+import LocalChat from './LocalChat';
+import MultiplayerGame from './MultiplayerGame';
+import { cn } from '@/lib/utils';
+
+interface MultiplayerModeProps {
+  onBack: () => void;
+}
+
+const MultiplayerMode = ({ onBack }: MultiplayerModeProps) => {
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showJoinDialog, setShowJoinDialog] = useState(false);
+  const [gameQuestions, setGameQuestions] = useState<BibleGame[]>([]);
+  
+  const {
+    isHost,
+    room,
+    peers,
+    messages,
+    connectionStatus,
+    gameState,
+    localId,
+    localName,
+    createRoom,
+    joinRoom,
+    leaveRoom,
+    sendChatMessage,
+    startGame,
+    submitAnswer,
+    updateScores,
+    sendQuestion,
+    isWebRTCSupported,
+    isBluetoothSupported
+  } = useLocalMultiplayer();
+
+  const { games: triviaGames } = useBibleGames('trivia');
+  const { games: characterGames } = useBibleGames('guess_character');
+
+  // Prepare questions when starting game
+  const handleStartGame = () => {
+    let questions: BibleGame[] = [];
+    
+    if (room?.gameType === 'trivia') {
+      questions = triviaGames;
+    } else if (room?.gameType === 'guess_character') {
+      questions = characterGames;
+    } else {
+      // Mix both game types
+      questions = [...triviaGames, ...characterGames]
+        .sort(() => Math.random() - 0.5);
+    }
+
+    // Limit to 10 questions for multiplayer
+    questions = questions.slice(0, 10);
+    setGameQuestions(questions);
+    startGame(questions);
+  };
+
+  const handleGameEnd = () => {
+    setGameQuestions([]);
+    // Reset game state by leaving and rejoining would be handled by host
+    if (isHost && room) {
+      updateScores(
+        room.currentPlayers.reduce((acc, p) => ({ ...acc, [p.id]: 0 }), {}),
+        'waiting'
+      );
+    }
+  };
+
+  // Not in a room - show options
+  if (!room) {
+    return (
+      <div className="space-y-6">
+        <Button variant="ghost" size="sm" onClick={onBack} className="gap-2">
+          <ArrowLeft className="w-4 h-4" />
+          Back to Games
+        </Button>
+
+        <div className="text-center space-y-2">
+          <h2 className="text-xl font-bold">Local Multiplayer</h2>
+          <p className="text-sm text-muted-foreground">
+            Play Bible games with friends on the same network
+          </p>
+        </div>
+
+        {/* Connection Status */}
+        <div className="flex justify-center gap-4 text-sm">
+          <div className={cn(
+            "flex items-center gap-1",
+            isWebRTCSupported ? "text-green-500" : "text-red-500"
+          )}>
+            <Wifi className="w-4 h-4" />
+            WiFi {isWebRTCSupported ? '✓' : '✗'}
+          </div>
+          <div className={cn(
+            "flex items-center gap-1",
+            isBluetoothSupported ? "text-green-500" : "text-muted-foreground"
+          )}>
+            <Bluetooth className="w-4 h-4" />
+            Bluetooth {isBluetoothSupported ? '✓' : '(Limited)'}
+          </div>
+        </div>
+
+        {!isWebRTCSupported && (
+          <Card className="bg-red-500/10 border-red-500/30">
+            <CardContent className="py-4 text-center">
+              <WifiOff className="w-8 h-8 text-red-500 mx-auto mb-2" />
+              <p className="text-sm text-red-500">
+                Your browser doesn't support local multiplayer. Try Chrome or Edge.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Create/Join Options */}
+        <div className="grid gap-4">
+          <Card
+            className="cursor-pointer hover:border-primary/50 transition-colors"
+            onClick={() => setShowCreateDialog(true)}
+          >
+            <CardContent className="flex items-center gap-4 p-4">
+              <div className="p-3 rounded-full bg-primary/10">
+                <Plus className="w-6 h-6 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold">Create Room</h3>
+                <p className="text-sm text-muted-foreground">
+                  Host a game for friends to join
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card
+            className="cursor-pointer hover:border-primary/50 transition-colors"
+            onClick={() => setShowJoinDialog(true)}
+          >
+            <CardContent className="flex items-center gap-4 p-4">
+              <div className="p-3 rounded-full bg-purple-500/10">
+                <Users className="w-6 h-6 text-purple-500" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold">Join Room</h3>
+                <p className="text-sm text-muted-foreground">
+                  Enter a room code to join a game
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* How it works */}
+        <div className="text-center space-y-2 pt-4">
+          <h4 className="text-sm font-medium text-muted-foreground">How it works</h4>
+          <ol className="text-xs text-muted-foreground space-y-1">
+            <li>1. Make sure all devices are on the same WiFi network</li>
+            <li>2. One person creates a room and shares the code</li>
+            <li>3. Others join using the room code</li>
+            <li>4. Compete or cooperate in Bible trivia!</li>
+          </ol>
+        </div>
+
+        <CreateRoomDialog
+          open={showCreateDialog}
+          onOpenChange={setShowCreateDialog}
+          onCreate={createRoom}
+        />
+        
+        <JoinRoomDialog
+          open={showJoinDialog}
+          onOpenChange={setShowJoinDialog}
+          onJoin={joinRoom}
+        />
+      </div>
+    );
+  }
+
+  // In a room but game not started
+  if (room.status === 'waiting' || !gameState) {
+    return (
+      <div className="space-y-4">
+        <GameLobby
+          room={room}
+          peers={peers}
+          isHost={isHost}
+          localId={localId}
+          connectionStatus={connectionStatus}
+          onStartGame={handleStartGame}
+          onLeaveRoom={leaveRoom}
+        />
+
+        <LocalChat
+          messages={messages}
+          localId={localId}
+          onSendMessage={sendChatMessage}
+        />
+      </div>
+    );
+  }
+
+  // Game in progress
+  return (
+    <div className="space-y-4">
+      <MultiplayerGame
+        room={room}
+        gameState={gameState}
+        questions={gameQuestions}
+        localId={localId}
+        isHost={isHost}
+        onSubmitAnswer={submitAnswer}
+        onUpdateScores={updateScores}
+        onSendQuestion={sendQuestion}
+        onGameEnd={handleGameEnd}
+      />
+    </div>
+  );
+};
+
+export default MultiplayerMode;
