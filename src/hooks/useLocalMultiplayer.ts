@@ -157,7 +157,10 @@ export const useLocalMultiplayer = () => {
     });
 
     // Host announces presence so guests can discover them
-    connectionManager.current.announce();
+    // Fire and forget - the announcement will set up periodically
+    connectionManager.current.announce().catch(err => {
+      console.error('Error announcing room:', err);
+    });
 
     return roomId;
   }, []);
@@ -214,8 +217,8 @@ export const useLocalMultiplayer = () => {
       handleMessage(peerId, message);
     });
 
-    // Announce presence
-    connectionManager.current.announce();
+    // Announce presence and wait for signaling to be ready
+    await connectionManager.current.announce();
 
     // Wait for connection
     return new Promise<boolean>((resolve) => {
