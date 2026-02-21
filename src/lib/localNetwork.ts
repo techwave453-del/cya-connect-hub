@@ -33,7 +33,7 @@ export interface GameRoom {
 }
 
 export interface GameMessage {
-  type: 'chat' | 'game_state' | 'answer' | 'score_update' | 'player_join' | 'player_leave' | 'game_start' | 'question' | 'room_update';
+  type: 'chat' | 'game_state' | 'answer' | 'score_update' | 'player_join' | 'player_leave' | 'game_start' | 'question' | 'room_update' | 'request_room_info' | 'room_info';
   senderId: string;
   senderName: string;
   payload: any;
@@ -284,19 +284,19 @@ export class PeerConnectionManager {
     await this.signaling.waitForSubscription();
     
     console.log('Announcing presence...');
+    
+    // Send initial announcement
     this.signaling.send('peer-announce', { senderName: this.localName }, this.localId);
     
-    // Re-announce periodically to ensure discovery
+    // Continue announcing periodically to ensure discovery, even after connecting
+    // This allows late joiners to discover the room
     const announceInterval = setInterval(() => {
-      if (this.getConnectedPeerCount() === 0) {
-        this.signaling.send('peer-announce', { senderName: this.localName }, this.localId);
-      } else {
-        clearInterval(announceInterval);
-      }
-    }, 2000);
+      this.signaling.send('peer-announce', { senderName: this.localName }, this.localId);
+    }, 3000);
 
-    // Stop after 30 seconds
-    setTimeout(() => clearInterval(announceInterval), 30000);
+    // Keep announcing indefinitely (until close is called)
+    // Store interval ID so it can be cleared on close
+    (this as any).announceIntervalId = announceInterval;
   }
 
   // Respond to announcements (for hosts)
@@ -507,6 +507,11 @@ export class PeerConnectionManager {
 
   // Cleanup
   close() {
+    // Clear announce interval if it exists
+    if ((this as any).announceIntervalId) {
+      clearInterval((this as any).announceIntervalId);
+    }
+    
     this.dataChannels.forEach((channel) => channel.close());
     this.connections.forEach((pc) => pc.close());
     this.signaling.close();

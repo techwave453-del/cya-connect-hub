@@ -182,6 +182,19 @@ export const useLocalMultiplayer = () => {
       setState(prev => {
         // Mark as host if this is the first peer (they're the room host)
         const updatedPeer = { ...peer, isHost: prev.peers.length === 0 };
+        
+        // Request room info from the host
+        if (updatedPeer.isHost) {
+          setTimeout(() => {
+            connectionManager.current?.sendTo(peer.id, {
+              type: 'request_room_info',
+              senderId: localId.current,
+              senderName: localName.current,
+              payload: {}
+            });
+          }, 100);
+        }
+        
         return {
           ...prev,
           peers: [...prev.peers, updatedPeer],
@@ -315,6 +328,24 @@ export const useLocalMultiplayer = () => {
               phase: message.payload.phase || prev.gameState.phase,
               roundWinner: message.payload.roundWinner
             } : null
+          };
+
+        case 'request_room_info':
+          // Host should send room info to requesting guest
+          if (prev.isHost && prev.room && connectionManager.current) {
+            connectionManager.current.sendTo(peerId, {
+              type: 'room_info',
+              senderId: localId.current,
+              senderName: localName.current,
+              payload: { room: prev.room }
+            });
+          }
+          return prev;
+
+        case 'room_info':
+          return {
+            ...prev,
+            room: message.payload.room
           };
 
         default:
