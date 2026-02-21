@@ -264,13 +264,11 @@ export class PeerConnectionManager {
       if (data.from !== this.localId && !this.connections.has(data.from) && !this.pendingConnections.has(data.from)) {
         console.log('Peer announced:', data.from, data.senderName);
         // Respond to let them know we're here
+        // Do NOT initiate connection - let the announcer initiate after getting this response
         this.signaling.send('peer-response', { 
           to: data.from,
           senderName: this.localName 
         }, this.localId);
-        // Initiate connection
-        console.log('Initiating connection to peer:', data.from);
-        this.connectToPeer(data.from, data.senderName);
       }
     });
 
@@ -341,12 +339,18 @@ export class PeerConnectionManager {
 
     pc.onconnectionstatechange = () => {
       console.log('Connection state changed to:', pc.connectionState, 'with peer:', peerId);
-      if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
-        console.warn('Connection failed/disconnected with peer:', peerId);
+      if (pc.connectionState === 'failed') {
+        console.error('❌ Connection FAILED with peer:', peerId, '- will retry on next announcement');
+        // Don't immediately close - other peers might still connect
+        // The connection will be retried if the peer announces again
+      } else if (pc.connectionState === 'disconnected') {
+        console.warn('⚠ Connection DISCONNECTED with peer:', peerId);
+        this.dataChannels.delete(peerId);
+      } else if (pc.connectionState === 'closed') {
+        console.warn('Connection CLOSED with peer:', peerId);
+        this.dataChannels.delete(peerId);
         this.pendingConnections.delete(peerId);
         this.connections.delete(peerId);
-        this.dataChannels.delete(peerId);
-        this.onPeerDisconnectedCallback?.(peerId);
       }
     };
 
@@ -400,12 +404,16 @@ export class PeerConnectionManager {
 
     pc.onconnectionstatechange = () => {
       console.log('Connection state changed to:', pc.connectionState, 'with peer:', fromId);
-      if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
-        console.warn('Connection failed/disconnected with peer:', fromId);
+      if (pc.connectionState === 'failed') {
+        console.error('❌ Connection FAILED with peer:', fromId, '- waiting for retry');
+      } else if (pc.connectionState === 'disconnected') {
+        console.warn('⚠ Connection DISCONNECTED with peer:', fromId);
+        this.dataChannels.delete(fromId);
+      } else if (pc.connectionState === 'closed') {
+        console.warn('Connection CLOSED with peer:', fromId);
+        this.dataChannels.delete(fromId);
         this.pendingConnections.delete(fromId);
         this.connections.delete(fromId);
-        this.dataChannels.delete(fromId);
-        this.onPeerDisconnectedCallback?.(fromId);
       }
     };
 
@@ -467,12 +475,12 @@ export class PeerConnectionManager {
     channel.onclose = () => {
       console.log('× Data channel CLOSED with peer:', peerId);
       this.dataChannels.delete(peerId);
-      this.pendingConnections.delete(peerId);
-      this.onPeerDisconnectedCallback?.(peerId);
+      // Keep pending connection state in case of transient close
+      // Only remove from pending if it was actually failed
     };
 
     channel.onerror = (error) => {
-      console.error('Data channel error with peer:', peerId, error);
+      console.error('Data channel ERROR with peer:', peerId, error);
     };
 
     channel.onmessage = (event) => {
