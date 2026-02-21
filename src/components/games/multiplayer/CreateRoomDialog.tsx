@@ -19,7 +19,7 @@ interface CreateRoomDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreate: (
-    gameType: 'trivia' | 'guess_character' | 'all',
+    gameType: 'trivia' | 'guess_character' | 'fill_blank' | 'memory_verse' | 'daily_challenge' | 'all',
     gameMode: GameMode,
     gameName: string,
     maxPlayers: number
@@ -28,7 +28,7 @@ interface CreateRoomDialogProps {
 
 const CreateRoomDialog = ({ open, onOpenChange, onCreate }: CreateRoomDialogProps) => {
   const [gameName, setGameName] = useState('');
-  const [gameType, setGameType] = useState<'trivia' | 'guess_character' | 'all'>('all');
+  const [gameType, setGameType] = useState<'trivia' | 'guess_character' | 'fill_blank' | 'memory_verse' | 'daily_challenge' | 'all'>('all');
   const [gameMode, setGameMode] = useState<GameMode>('competitive');
   const [maxPlayers, setMaxPlayers] = useState(4);
 
@@ -73,7 +73,10 @@ const CreateRoomDialog = ({ open, onOpenChange, onCreate }: CreateRoomDialogProp
               {[
                 { id: 'all', label: 'All Games', icon: Gamepad2 },
                 { id: 'trivia', label: 'Trivia', icon: BookOpen },
-                { id: 'guess_character', label: 'Characters', icon: User }
+                { id: 'guess_character', label: 'Characters', icon: User },
+                { id: 'fill_blank', label: 'Fill Blank', icon: PenTool },
+                { id: 'memory_verse', label: 'Memory Verses', icon: Brain },
+                { id: 'daily_challenge', label: 'Daily', icon: Calendar }
               ].map((type) => (
                 <button
                   key={type.id}

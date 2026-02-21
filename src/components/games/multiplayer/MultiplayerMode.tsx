@@ -43,19 +43,39 @@ const MultiplayerMode = ({ onBack }: MultiplayerModeProps) => {
 
   const { games: triviaGames } = useBibleGames('trivia');
   const { games: characterGames } = useBibleGames('guess_character');
+  const { games: fillBlankGames } = useBibleGames('fill_blank');
+  const { games: memoryVerseGames } = useBibleGames('memory_verse');
+  const { games: allGames } = useBibleGames();
 
   // Prepare questions when starting game
   const handleStartGame = () => {
     let questions: BibleGame[] = [];
     
-    if (room?.gameType === 'trivia') {
-      questions = triviaGames;
-    } else if (room?.gameType === 'guess_character') {
-      questions = characterGames;
-    } else {
-      // Mix both game types
-      questions = [...triviaGames, ...characterGames]
-        .sort(() => Math.random() - 0.5);
+    if (!room) return;
+
+    switch (room.gameType) {
+      case 'trivia':
+        questions = triviaGames;
+        break;
+      case 'guess_character':
+        questions = characterGames;
+        break;
+      case 'fill_blank':
+        questions = fillBlankGames;
+        break;
+      case 'memory_verse':
+        questions = memoryVerseGames;
+        break;
+      case 'daily_challenge':
+        // Daily: sample across categories for variety
+        questions = [...triviaGames, ...characterGames, ...fillBlankGames, ...memoryVerseGames]
+          .sort(() => Math.random() - 0.5);
+        break;
+      case 'all':
+      default:
+        questions = allGames.length ? allGames : [...triviaGames, ...characterGames, ...fillBlankGames, ...memoryVerseGames];
+        questions = questions.sort(() => Math.random() - 0.5);
+        break;
     }
 
     // Limit to 10 questions for multiplayer

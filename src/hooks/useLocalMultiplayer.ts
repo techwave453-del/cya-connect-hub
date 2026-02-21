@@ -59,7 +59,7 @@ export const useLocalMultiplayer = () => {
 
   // Create a new game room (host)
   const createRoom = useCallback((
-    gameType: 'trivia' | 'guess_character' | 'all',
+    gameType: 'trivia' | 'guess_character' | 'fill_blank' | 'memory_verse' | 'daily_challenge' | 'all',
     gameMode: GameMode,
     gameName: string,
     maxPlayers: number = 4
