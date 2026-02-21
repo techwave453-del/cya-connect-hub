@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Users, Wifi, Bluetooth, WifiOff } from 'lucide-react';
+import { Plus, Users, Wifi, Bluetooth, WifiOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useLocalMultiplayer } from '@/hooks/useLocalMultiplayer';
@@ -79,11 +79,6 @@ const MultiplayerMode = ({ onBack }: MultiplayerModeProps) => {
   if (!room) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" size="sm" onClick={onBack} className="gap-2">
-          <ArrowLeft className="w-4 h-4" />
-          Back to Games
-        </Button>
-
         <div className="text-center space-y-2">
           <h2 className="text-xl font-bold">Local Multiplayer</h2>
           <p className="text-sm text-muted-foreground">
