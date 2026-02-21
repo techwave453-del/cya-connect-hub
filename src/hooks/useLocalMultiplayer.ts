@@ -21,6 +21,7 @@ export interface MultiplayerState {
   messages: GameMessage[];
   connectionStatus: 'disconnected' | 'connecting' | 'connected';
   gameState: MultiplayerGameState | null;
+  sharedQuestions: any[];
 }
 
 export interface MultiplayerGameState {
@@ -41,7 +42,8 @@ export const useLocalMultiplayer = () => {
     peers: [],
     messages: [],
     connectionStatus: 'disconnected',
-    gameState: null
+    gameState: null,
+    sharedQuestions: []
   });
 
   const connectionManager = useRef<PeerConnectionManager | null>(null);
@@ -321,7 +323,8 @@ export const useLocalMultiplayer = () => {
         case 'game_start':
           return {
             ...prev,
-            gameState: message.payload.gameState
+            gameState: message.payload.gameState,
+            sharedQuestions: message.payload.questions || []
           };
 
         case 'question':
@@ -458,7 +461,8 @@ export const useLocalMultiplayer = () => {
     setState(prev => ({
       ...prev,
       room: prev.room ? { ...prev.room, status: 'playing' } : null,
-      gameState: initialGameState
+      gameState: initialGameState,
+      sharedQuestions: questions
     }));
   }, [state.isHost, state.room]);
 

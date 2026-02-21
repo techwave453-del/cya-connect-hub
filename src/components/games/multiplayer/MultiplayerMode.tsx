@@ -18,7 +18,6 @@ interface MultiplayerModeProps {
 const MultiplayerMode = ({ onBack }: MultiplayerModeProps) => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showJoinDialog, setShowJoinDialog] = useState(false);
-  const [gameQuestions, setGameQuestions] = useState<BibleGame[]>([]);
   
   const {
     isHost,
@@ -38,7 +37,8 @@ const MultiplayerMode = ({ onBack }: MultiplayerModeProps) => {
     updateScores,
     sendQuestion,
     isWebRTCSupported,
-    isBluetoothSupported
+    isBluetoothSupported,
+    sharedQuestions
   } = useLocalMultiplayer();
 
   const { games: triviaGames } = useBibleGames('trivia');
@@ -60,12 +60,11 @@ const MultiplayerMode = ({ onBack }: MultiplayerModeProps) => {
 
     // Limit to 10 questions for multiplayer
     questions = questions.slice(0, 10);
-    setGameQuestions(questions);
     startGame(questions);
   };
 
   const handleGameEnd = () => {
-    setGameQuestions([]);
+    // Host resets scores; sharedQuestions will be cleared when game state resets
     // Reset game state by leaving and rejoining would be handled by host
     if (isHost && room) {
       updateScores(
@@ -207,7 +206,7 @@ const MultiplayerMode = ({ onBack }: MultiplayerModeProps) => {
       <MultiplayerGame
         room={room}
         gameState={gameState}
-        questions={gameQuestions}
+        questions={sharedQuestions}
         localId={localId}
         isHost={isHost}
         onSubmitAnswer={submitAnswer}
