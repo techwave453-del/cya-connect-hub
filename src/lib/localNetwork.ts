@@ -160,20 +160,25 @@ export class RealtimeSignaling {
       });
 
     // Safety timeout: some environments never emit TIMED_OUT.
+    // Increase timeout to allow slower networks to subscribe
     this.subscribeTimeoutId = window.setTimeout(() => {
       if (!this.isSubscribed) {
         console.warn('Signaling subscribe timeout - retrying');
         this.retrySubscribe();
       }
-    }, 7000);
+    }, 15000);
   }
 
   private retrySubscribe() {
     if (this.closed) return;
-    if (this.retryCount >= 3) return;
+    // Allow more retry attempts before giving up
+    if (this.retryCount >= 6) {
+      console.error('Exceeded signaling retry attempts, giving up for now');
+      return;
+    }
     this.retryCount += 1;
 
-    const delay = Math.min(500 * Math.pow(2, this.retryCount - 1), 4000);
+    const delay = Math.min(500 * Math.pow(2, this.retryCount - 1), 8000);
     console.warn(`Retrying signaling subscription (attempt ${this.retryCount}) in ${delay}ms`);
 
     this.teardownChannel();
@@ -200,6 +205,7 @@ export class RealtimeSignaling {
       if (!this.isSubscribed) {
         // Queue message if not yet subscribed
         this.pendingMessages.push({ type, data, from });
+        console.debug('Queued signaling message (not subscribed):', type, data, 'from', from);
         // Nudge a retry in case we're stuck.
         this.retrySubscribe();
         return;
