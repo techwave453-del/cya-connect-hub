@@ -126,11 +126,12 @@ export class RealtimeSignaling {
         }
       })
       .subscribe((status) => {
-        console.log('Signaling channel status:', status);
+        console.log('Signaling channel status:', status, 'for room:', this.roomId);
 
         if (status === 'SUBSCRIBED') {
           this.retryCount = 0;
           this.isSubscribed = true;
+          console.log('✓ Successfully subscribed to signaling channel for room:', this.roomId);
           this.resolveSubscribe();
           // Send any pending messages
           this.pendingMessages.forEach((msg) => {
@@ -142,6 +143,7 @@ export class RealtimeSignaling {
 
         // If realtime fails to subscribe, try recreating the channel.
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          console.warn('Signaling channel error, will retry:', status);
           this.retrySubscribe();
         }
       });
@@ -329,6 +331,7 @@ export class PeerConnectionManager {
     // Handle ICE candidates
     pc.onicecandidate = (event) => {
       if (event.candidate) {
+        console.log('Sending ICE candidate to:', peerId);
         this.signaling.send('ice-candidate', {
           to: peerId,
           candidate: event.candidate
@@ -337,8 +340,9 @@ export class PeerConnectionManager {
     };
 
     pc.onconnectionstatechange = () => {
-      console.log('Connection state:', pc.connectionState);
+      console.log('Connection state changed to:', pc.connectionState, 'with peer:', peerId);
       if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+        console.warn('Connection failed/disconnected with peer:', peerId);
         this.pendingConnections.delete(peerId);
         this.connections.delete(peerId);
         this.dataChannels.delete(peerId);
@@ -346,10 +350,15 @@ export class PeerConnectionManager {
       }
     };
 
+    pc.oniceconnectionstatechange = () => {
+      console.log('ICE connection state:', pc.iceConnectionState, 'with peer:', peerId);
+    };
+
     // Create and send offer
     try {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
+      console.log('Sending offer to peer:', peerId);
       this.signaling.send('offer', {
         to: peerId,
         offer: offer,
@@ -365,19 +374,23 @@ export class PeerConnectionManager {
   private async handleOffer(fromId: string, offer: RTCSessionDescriptionInit, senderName: string) {
     if (this.connections.has(fromId)) {
       // Already have a connection, ignore
+      console.log('Already have connection with peer:', fromId, 'ignoring offer');
       return;
     }
 
+    console.log('Received offer from peer:', fromId, '(' + senderName + ')');
     this.pendingConnections.add(fromId);
     const pc = new RTCPeerConnection(rtcConfig);
     this.connections.set(fromId, pc);
 
     pc.ondatachannel = (event) => {
+      console.log('Received data channel from peer:', fromId);
       this.setupDataChannel(event.channel, fromId, senderName);
     };
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
+        console.log('Sending ICE candidate (answer) to:', fromId);
         this.signaling.send('ice-candidate', {
           to: fromId,
           candidate: event.candidate
@@ -386,8 +399,9 @@ export class PeerConnectionManager {
     };
 
     pc.onconnectionstatechange = () => {
-      console.log('Connection state:', pc.connectionState);
+      console.log('Connection state changed to:', pc.connectionState, 'with peer:', fromId);
       if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+        console.warn('Connection failed/disconnected with peer:', fromId);
         this.pendingConnections.delete(fromId);
         this.connections.delete(fromId);
         this.dataChannels.delete(fromId);
@@ -395,10 +409,15 @@ export class PeerConnectionManager {
       }
     };
 
+    pc.oniceconnectionstatechange = () => {
+      console.log('ICE connection state:', pc.iceConnectionState, 'with peer:', fromId);
+    };
+
     try {
       await pc.setRemoteDescription(offer);
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
+      console.log('Sending answer back to peer:', fromId);
       this.signaling.send('answer', {
         to: fromId,
         answer: answer
@@ -434,7 +453,7 @@ export class PeerConnectionManager {
 
   private setupDataChannel(channel: RTCDataChannel, peerId: string, peerName: string) {
     channel.onopen = () => {
-      console.log('Data channel opened with:', peerId);
+      console.log('✓ Data channel OPENED with peer:', peerId, '(' + peerName + ')');
       this.dataChannels.set(peerId, channel);
       this.pendingConnections.delete(peerId);
       this.onPeerConnectedCallback?.({
@@ -446,14 +465,14 @@ export class PeerConnectionManager {
     };
 
     channel.onclose = () => {
-      console.log('Data channel closed with:', peerId);
+      console.log('× Data channel CLOSED with peer:', peerId);
       this.dataChannels.delete(peerId);
       this.pendingConnections.delete(peerId);
       this.onPeerDisconnectedCallback?.(peerId);
     };
 
     channel.onerror = (error) => {
-      console.error('Data channel error:', error);
+      console.error('Data channel error with peer:', peerId, error);
     };
 
     channel.onmessage = (event) => {

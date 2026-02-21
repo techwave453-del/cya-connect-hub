@@ -223,14 +223,15 @@ export const useLocalMultiplayer = () => {
     // Wait for connection
     return new Promise<boolean>((resolve) => {
       let resolved = false;
+      let lastPeerCount = 0;
       
       const timeout = setTimeout(() => {
         if (!resolved && connectionManager.current?.getConnectedPeerCount() === 0) {
           resolved = true;
-          console.error('Connection timeout - no peers connected');
+          console.error('Connection timeout - no peers connected after 30s');
           toast({
             title: "Connection Failed",
-            description: "Couldn't find the game room. Check the code and try again.",
+            description: "Couldn't find the game room. Ensure both devices are on the same WiFi network and the code is correct.",
             variant: "destructive"
           });
           connectionManager.current?.close();
@@ -238,15 +239,24 @@ export const useLocalMultiplayer = () => {
           setState(prev => ({ ...prev, connectionStatus: 'disconnected' }));
           resolve(false);
         }
-      }, 30000); // Increased from 15s to 30s to allow for WebRTC handshake
+      }, 30000); // 30 seconds for full WebRTC handshake
 
       const checkConnection = setInterval(() => {
         if (!resolved && connectionManager.current) {
           const peerCount = connectionManager.current.getConnectedPeerCount();
+          
+          // Log status updates every 3 seconds
+          if (peerCount !== lastPeerCount) {
+            console.log(`Connection status: ${peerCount} peers connected`);
+            lastPeerCount = peerCount;
+          }
+          
           if (peerCount > 0) {
             resolved = true;
             clearTimeout(timeout);
             clearInterval(checkConnection);
+            
+            console.log('Successfully connected to peer, setting up game state');
             
             // Create local player and add to room
             const localPlayer: LocalPeer = {
@@ -275,7 +285,7 @@ export const useLocalMultiplayer = () => {
             resolve(true);
           }
         }
-      }, 300); // Increased check frequency from 500ms to 300ms
+      }, 300); // Check connection status every 300ms
     });
   }, []);
 
