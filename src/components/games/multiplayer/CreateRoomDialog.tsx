@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Users, Swords, HandHeart, BookOpen, User, Gamepad2 } from 'lucide-react';
+import { Plus, Users, Swords, HandHeart, BookOpen, User, Gamepad2, PenTool, Brain, Calendar } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
