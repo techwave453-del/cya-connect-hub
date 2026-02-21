@@ -6,6 +6,8 @@ import {
   GameMessage,
   GameMode,
   generateRoomCode,
+  generatePasscode,
+  isValidPasscode,
   isWebRTCAvailable,
   isBluetoothAvailable
 } from '@/lib/localNetwork';
@@ -72,6 +74,7 @@ export const useLocalMultiplayer = () => {
     const roomId = generateRoomCode();
     const room: GameRoom = {
       id: roomId,
+      passcode: generatePasscode(),
       hostId: localId.current,
       hostName: localName.current,
       gameName,
@@ -166,11 +169,21 @@ export const useLocalMultiplayer = () => {
   }, []);
 
   // Join an existing room (guest)
-  const joinRoom = useCallback(async (roomCode: string) => {
+  const joinRoom = useCallback(async (roomCode: string, passcode: string) => {
     if (!isWebRTCAvailable()) {
       toast({
         title: "Not Supported",
         description: "Your browser doesn't support local multiplayer",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    // Validate passcode format
+    if (!isValidPasscode(passcode)) {
+      toast({
+        title: "Invalid Passcode",
+        description: "Passcode must be 4 digits",
         variant: "destructive"
       });
       return false;
@@ -186,14 +199,14 @@ export const useLocalMultiplayer = () => {
         // Mark as host if this is the first peer (they're the room host)
         const updatedPeer = { ...peer, isHost: prev.peers.length === 0 };
         
-        // Request room info from the host
+        // Request room info from the host (which validates passcode)
         if (updatedPeer.isHost) {
           setTimeout(() => {
             connectionManager.current?.sendTo(peer.id, {
               type: 'request_room_info',
               senderId: localId.current,
               senderName: localName.current,
-              payload: {}
+              payload: { passcode }
             });
           }, 100);
         }
@@ -231,7 +244,7 @@ export const useLocalMultiplayer = () => {
           console.error('Connection timeout - no peers connected after 30s');
           toast({
             title: "Connection Failed",
-            description: "Couldn't find the game room. Ensure both devices are on the same WiFi network and the code is correct.",
+            description: "Couldn't find the game room. Check that you have internet, the room code is correct, and the passcode matches.",
             variant: "destructive"
           });
           connectionManager.current?.close();
@@ -348,18 +361,49 @@ export const useLocalMultiplayer = () => {
           };
 
         case 'request_room_info':
-          // Host should send room info to requesting guest
+          // Host should send room info to requesting guest (with passcode validation)
           if (prev.isHost && prev.room && connectionManager.current) {
-            connectionManager.current.sendTo(peerId, {
-              type: 'room_info',
-              senderId: localId.current,
-              senderName: localName.current,
-              payload: { room: prev.room }
-            });
+            const guestPasscode = message.payload.passcode;
+            const roomPasscode = prev.room.passcode;
+            
+            // Validate passcode
+            if (guestPasscode === roomPasscode) {
+              connectionManager.current.sendTo(peerId, {
+                type: 'room_info',
+                senderId: localId.current,
+                senderName: localName.current,
+                payload: { room: prev.room, authorized: true }
+              });
+            } else {
+              // Wrong passcode
+              connectionManager.current.sendTo(peerId, {
+                type: 'room_info',
+                senderId: localId.current,
+                senderName: localName.current,
+                payload: { authorized: false, error: 'Invalid passcode' }
+              });
+              console.warn('Guest attempted to join with wrong passcode');
+            }
           }
           return prev;
 
         case 'room_info':
+          if (message.payload.authorized === false) {
+            // Passcode validation failed
+            connectionManager.current?.close();
+            connectionManager.current = null;
+            toast({
+              title: "Access Denied",
+              description: message.payload.error || "Invalid passcode. Reconnect and try again.",
+              variant: "destructive"
+            });
+            return {
+              ...prev,
+              connectionStatus: 'disconnected',
+              room: null,
+              peers: []
+            };
+          }
           return {
             ...prev,
             room: message.payload.room

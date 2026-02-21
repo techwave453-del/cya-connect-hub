@@ -80,9 +80,9 @@ const MultiplayerMode = ({ onBack }: MultiplayerModeProps) => {
     return (
       <div className="space-y-6">
         <div className="text-center space-y-2">
-          <h2 className="text-xl font-bold">Local Multiplayer</h2>
+          <h2 className="text-xl font-bold">Multiplayer Games</h2>
           <p className="text-sm text-muted-foreground">
-            Play Bible games with friends on the same network
+            Play Bible games with friends anywhere with internet
           </p>
         </div>
 
@@ -156,9 +156,9 @@ const MultiplayerMode = ({ onBack }: MultiplayerModeProps) => {
         <div className="text-center space-y-2 pt-4">
           <h4 className="text-sm font-medium text-muted-foreground">How it works</h4>
           <ol className="text-xs text-muted-foreground space-y-1">
-            <li>1. Make sure all devices are on the same WiFi network</li>
-            <li>2. One person creates a room and shares the code</li>
-            <li>3. Others join using the room code</li>
+            <li>1. Make sure all devices have internet access</li>
+            <li>2. One person creates a room and gets a code + passcode</li>
+            <li>3. Others join using the room code and passcode</li>
             <li>4. Compete or cooperate in Bible trivia!</li>
           </ol>
         </div>

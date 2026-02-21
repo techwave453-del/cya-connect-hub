@@ -57,21 +57,33 @@ const GameLobby = ({
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Room Code */}
+        {/* Room Code and Passcode */}
         {room && (
-          <div className="text-center p-4 bg-primary/10 rounded-xl border-2 border-dashed border-primary/30">
-            <p className="text-sm text-muted-foreground mb-2">Room Code</p>
-            <div className="flex items-center justify-center gap-2">
-              <span className="text-3xl font-mono font-bold tracking-widest text-primary">
-                {room.id}
-              </span>
-              <Button variant="ghost" size="icon" onClick={copyRoomCode}>
-                <Copy className="w-4 h-4" />
-              </Button>
+          <div className="space-y-3">
+            <div className="text-center p-4 bg-primary/10 rounded-xl border-2 border-dashed border-primary/30">
+              <p className="text-sm text-muted-foreground mb-2">Room Code</p>
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-3xl font-mono font-bold tracking-widest text-primary">
+                  {room.id}
+                </span>
+                <Button variant="ghost" size="icon" onClick={copyRoomCode}>
+                  <Copy className="w-4 h-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Share this code with friends to join
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Share this code with friends to join
-            </p>
+            
+            <div className="text-center p-3 bg-amber-500/10 rounded-lg border border-amber-500/30">
+              <p className="text-xs text-muted-foreground mb-1">Passcode</p>
+              <p className="text-2xl font-mono font-bold tracking-widest text-amber-600">
+                {room.passcode}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Share with guests for secure access
+              </p>
+            </div>
           </div>
         )}
 

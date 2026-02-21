@@ -21,6 +21,7 @@ export interface LocalPeer {
 
 export interface GameRoom {
   id: string;
+  passcode: string;
   hostId: string;
   hostName: string;
   gameName: string;
@@ -48,6 +49,16 @@ export const generateRoomCode = (): string => {
     code += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return code;
+};
+
+// Generate a 4-digit passcode for security
+export const generatePasscode = (): string => {
+  return Math.floor(1000 + Math.random() * 9000).toString();
+};
+
+// Validate passcode format
+export const isValidPasscode = (passcode: string): boolean => {
+  return /^\d{4}$/.test(passcode);
 };
 
 // WebRTC configuration for local network (STUN servers for NAT traversal)
