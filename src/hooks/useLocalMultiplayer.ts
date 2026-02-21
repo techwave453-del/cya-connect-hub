@@ -227,6 +227,7 @@ export const useLocalMultiplayer = () => {
       const timeout = setTimeout(() => {
         if (!resolved && connectionManager.current?.getConnectedPeerCount() === 0) {
           resolved = true;
+          console.error('Connection timeout - no peers connected');
           toast({
             title: "Connection Failed",
             description: "Couldn't find the game room. Check the code and try again.",
@@ -237,41 +238,44 @@ export const useLocalMultiplayer = () => {
           setState(prev => ({ ...prev, connectionStatus: 'disconnected' }));
           resolve(false);
         }
-      }, 15000);
+      }, 30000); // Increased from 15s to 30s to allow for WebRTC handshake
 
       const checkConnection = setInterval(() => {
-        if (!resolved && connectionManager.current && connectionManager.current.getConnectedPeerCount() > 0) {
-          resolved = true;
-          clearTimeout(timeout);
-          clearInterval(checkConnection);
-          
-          // Create local player and add to room
-          const localPlayer: LocalPeer = {
-            id: localId.current,
-            name: localName.current,
-            connectionMethod: 'wifi',
-            isHost: false,
-            score: 0,
-            ready: true
-          };
-          
-          setState(prev => ({
-            ...prev,
-            isHost: false,
-            connectionStatus: 'connected',
-            room: prev.room ? {
-              ...prev.room,
-              currentPlayers: [...prev.room.currentPlayers, localPlayer]
-            } : null
-          }));
-          
-          toast({
-            title: "Connected! 🎮",
-            description: "You've joined the game"
-          });
-          resolve(true);
+        if (!resolved && connectionManager.current) {
+          const peerCount = connectionManager.current.getConnectedPeerCount();
+          if (peerCount > 0) {
+            resolved = true;
+            clearTimeout(timeout);
+            clearInterval(checkConnection);
+            
+            // Create local player and add to room
+            const localPlayer: LocalPeer = {
+              id: localId.current,
+              name: localName.current,
+              connectionMethod: 'wifi',
+              isHost: false,
+              score: 0,
+              ready: true
+            };
+            
+            setState(prev => ({
+              ...prev,
+              isHost: false,
+              connectionStatus: 'connected',
+              room: prev.room ? {
+                ...prev.room,
+                currentPlayers: [...prev.room.currentPlayers, localPlayer]
+              } : null
+            }));
+            
+            toast({
+              title: "Connected! 🎮",
+              description: "You've joined the game"
+            });
+            resolve(true);
+          }
         }
-      }, 500);
+      }, 300); // Increased check frequency from 500ms to 300ms
     });
   }, []);
 

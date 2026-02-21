@@ -224,6 +224,7 @@ export class PeerConnectionManager {
   private connections: Map<string, RTCPeerConnection> = new Map();
   private dataChannels: Map<string, RTCDataChannel> = new Map();
   private signaling: RealtimeSignaling;
+  private roomId: string;
   private localId: string;
   private localName: string;
   private onMessageCallback?: (peerId: string, message: GameMessage) => void;
@@ -232,6 +233,7 @@ export class PeerConnectionManager {
   private pendingConnections: Set<string> = new Set();
 
   constructor(roomId: string, localId: string, localName: string) {
+    this.roomId = roomId;
     this.localId = localId;
     this.localName = localName;
     this.signaling = new RealtimeSignaling(roomId, localId);
@@ -265,6 +267,7 @@ export class PeerConnectionManager {
           senderName: this.localName 
         }, this.localId);
         // Initiate connection
+        console.log('Initiating connection to peer:', data.from);
         this.connectToPeer(data.from, data.senderName);
       }
     });
@@ -273,6 +276,7 @@ export class PeerConnectionManager {
       if (data.to === this.localId && !this.connections.has(data.from) && !this.pendingConnections.has(data.from)) {
         console.log('Peer responded:', data.from, data.senderName);
         // Response to our announcement - initiate connection
+        console.log('Guest received response from host, initiating connection');
         this.connectToPeer(data.from, data.senderName);
       }
     });
@@ -281,9 +285,10 @@ export class PeerConnectionManager {
   // Announce presence in the room
   async announce() {
     // Wait for signaling channel to be subscribed first
+    console.log('Starting announcement, waiting for subscription...');
     await this.signaling.waitForSubscription();
     
-    console.log('Announcing presence...');
+    console.log('Announcing presence in room:', this.roomId);
     
     // Send initial announcement
     this.signaling.send('peer-announce', { senderName: this.localName }, this.localId);
