@@ -307,6 +307,8 @@ const BibleAIChat = ({ isOpen, onClose }: BibleAIChatProps) => {
   const [loadingInsight, setLoadingInsight] = useState(false);
   const [readMoreClicked, setReadMoreClicked] = useState(false);
   const [showInsight, setShowInsight] = useState(false);
+  const [messageModalOpen, setMessageModalOpen] = useState(false);
+  const [modalMessageContent, setModalMessageContent] = useState<string | null>(null);
   useEffect(() => {
     let timeout: number | undefined;
     let idx = 0;
@@ -417,10 +419,10 @@ const BibleAIChat = ({ isOpen, onClose }: BibleAIChatProps) => {
       <div 
         className={cn(
           "bg-card border border-border rounded-2xl shadow-2xl flex flex-col pointer-events-auto overflow-hidden",
-          "w-full sm:max-w-md md:max-w-lg lg:max-w-xl max-h-[80vh] h-auto",
+          "w-full sm:max-w-md md:max-w-lg lg:max-w-xl max-h-[95vh] h-auto",
           "animate-in slide-in-from-bottom-5 duration-300"
         )}
-        style={{ resize: 'vertical' as const, maxHeight: '80vh' }}
+        style={{ resize: 'vertical' as const, maxHeight: '95vh' }}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
@@ -585,7 +587,11 @@ const BibleAIChat = ({ isOpen, onClose }: BibleAIChatProps) => {
         ) : (
           <>
             {/* Messages */}
-            <ScrollArea className="flex-1 min-h-0 px-4" ref={scrollRef}>
+            <ScrollArea
+              className="min-h-0 px-4 overflow-auto"
+              ref={scrollRef}
+              style={{ maxHeight: 'calc(95vh - 160px)' }}
+            >
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full py-8 text-center">
                   <Sparkles className="w-12 h-12 text-primary/50 mb-4" />
@@ -664,12 +670,29 @@ const BibleAIChat = ({ isOpen, onClose }: BibleAIChatProps) => {
                             {loadingInsight ? (
                               <div className="text-xs text-muted-foreground">Loading insight...</div>
                             ) : currentInsight ? (
-                              <div className="prose prose-sm dark:prose-invert max-w-none overflow-hidden
-                                prose-p:my-1.5 prose-p:leading-relaxed prose-p:break-words
-                                prose-strong:text-primary prose-strong:font-semibold
-                                prose-em:text-primary/80 prose-em:not-italic prose-em:font-semibold
-                                prose-a:text-primary prose-a:font-semibold prose-a:underline prose-a:break-words">
-                                <ReactMarkdown>{enrichContentWithIcons(currentInsight)}</ReactMarkdown>
+                              <div>
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="text-xs text-muted-foreground">Insight</div>
+                                  <div>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => {
+                                        setModalMessageContent(currentInsight);
+                                        setMessageModalOpen(true);
+                                      }}
+                                    >
+                                      Read Full
+                                    </Button>
+                                  </div>
+                                </div>
+                                <div className="prose prose-sm dark:prose-invert max-w-none overflow-hidden
+                                  prose-p:my-1.5 prose-p:leading-relaxed prose-p:break-words
+                                  prose-strong:text-primary prose-strong:font-semibold
+                                  prose-em:text-primary/80 prose-em:not-italic prose-em:font-semibold
+                                  prose-a:text-primary prose-a:font-semibold prose-a:underline prose-a:break-words">
+                                  <ReactMarkdown>{enrichContentWithIcons(currentInsight)}</ReactMarkdown>
+                                </div>
                               </div>
                             ) : (
                               <div className="text-xs text-muted-foreground">Loading insight...</div>
@@ -709,7 +732,7 @@ const BibleAIChat = ({ isOpen, onClose }: BibleAIChatProps) => {
                         msg.role === 'user' ? "justify-end" : "justify-start"
                       )}
                     >
-                      <div className="max-w-[85%] group">
+                      <div className="max-w-[95%] sm:max-w-[85%] group">
                         {msg.role === 'assistant' && (
                           <div className="flex items-center gap-2 mb-1.5">
                             <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
@@ -723,8 +746,23 @@ const BibleAIChat = ({ isOpen, onClose }: BibleAIChatProps) => {
                             "text-sm leading-relaxed",
                             msg.role === 'user'
                               ? "bg-primary text-primary-foreground px-4 py-3 rounded-2xl rounded-br-md"
-                              : "bg-gradient-to-br from-muted/80 to-muted border border-border/50 px-4 py-4 rounded-2xl rounded-tl-md shadow-sm max-h-[60vh] overflow-y-auto"
+                              : "bg-gradient-to-br from-muted/80 to-muted border border-border/50 px-4 py-4 rounded-2xl rounded-tl-md shadow-sm"
                           )}
+                          onClick={() => {
+                            if (msg.role === 'assistant' && msg.content) {
+                              setModalMessageContent(msg.content);
+                              setMessageModalOpen(true);
+                            }
+                          }}
+                          role={msg.role === 'assistant' ? 'button' : undefined}
+                          tabIndex={msg.role === 'assistant' ? 0 : undefined}
+                          onKeyDown={(e) => {
+                            if (msg.role === 'assistant' && (e.key === 'Enter' || e.key === ' ')) {
+                              setModalMessageContent(msg.content);
+                              setMessageModalOpen(true);
+                            }
+                          }}
+                          title={msg.role === 'assistant' ? 'Tap to open full response' : undefined}
                         >
                           {msg.role === 'assistant' ? (
                             <div className="prose prose-sm dark:prose-invert max-w-none overflow-hidden
@@ -781,6 +819,17 @@ const BibleAIChat = ({ isOpen, onClose }: BibleAIChatProps) => {
                                 <Copy className="w-3.5 h-3.5 mr-1.5" />
                               )}
                               {copiedIndex === index ? 'Copied!' : 'Copy'}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/80 rounded-lg"
+                              onClick={() => {
+                                setModalMessageContent(msg.content);
+                                setMessageModalOpen(true);
+                              }}
+                            >
+                              Read Full
                             </Button>
                           </div>
                         )}
@@ -859,6 +908,35 @@ const BibleAIChat = ({ isOpen, onClose }: BibleAIChatProps) => {
             </div>
           </>
         )}
+        {/* Message modal for long responses */}
+        <Dialog open={messageModalOpen} onOpenChange={setMessageModalOpen}>
+          <DialogContent className="w-full max-w-3xl">
+            <div className="bg-card border border-border rounded-lg overflow-hidden max-h-[85vh]">
+              <div className="p-4 border-b border-border flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="font-semibold">Full Response</h3>
+                  <p className="text-xs text-muted-foreground">Tap copy to save or close when done.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => {
+                    if (modalMessageContent) {
+                      navigator.clipboard.writeText(modalMessageContent);
+                      toast({ title: 'Copied to clipboard' });
+                    }
+                  }}>
+                    <Copy className="w-4 h-4 mr-2" />Copy
+                  </Button>
+                  <Button variant="outline" onClick={() => setMessageModalOpen(false)}>Close</Button>
+                </div>
+              </div>
+              <div className="p-4 overflow-y-auto max-h-[72vh] prose prose-sm dark:prose-invert max-w-none">
+                {modalMessageContent && (
+                  <ReactMarkdown>{enrichContentWithIcons(modalMessageContent)}</ReactMarkdown>
+                )}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

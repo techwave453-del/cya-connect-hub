@@ -39,7 +39,7 @@ const GameLobby = ({
   };
 
   const allPlayers = room?.currentPlayers || [];
-  const canStart = isHost && allPlayers.length >= 2;
+  const canStart = allPlayers.length >= 2;
 
   return (
     <Card className="bg-card border-border">
@@ -165,19 +165,17 @@ const GameLobby = ({
             <LogOut className="w-4 h-4" />
             Leave
           </Button>
-          {isHost && (
-            <Button
-              onClick={onStartGame}
-              disabled={!canStart}
-              className="flex-1 gap-2"
-            >
-              <Play className="w-4 h-4" />
-              Start Game
-            </Button>
-          )}
+          <Button
+            onClick={onStartGame}
+            disabled={!canStart}
+            className="flex-1 gap-2"
+          >
+            <Play className="w-4 h-4" />
+            {isHost ? 'Start Game' : 'Request Start'}
+          </Button>
         </div>
 
-        {isHost && !canStart && allPlayers.length < 2 && (
+        {!canStart && allPlayers.length < 2 && (
           <p className="text-xs text-center text-muted-foreground">
             Need at least 2 players to start
           </p>

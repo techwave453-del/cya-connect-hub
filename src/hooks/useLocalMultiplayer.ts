@@ -412,6 +412,19 @@ export const useLocalMultiplayer = () => {
             room: message.payload.room
           };
 
+        case 'start_request':
+          // If a guest requests start, and we're the host, start the game with the provided questions
+          if (prev.isHost && connectionManager.current) {
+            const questions = message.payload?.questions || prev.sharedQuestions || [];
+            // call startGame (will run because we're host)
+            // startGame is defined later but captured from closure; invoke via setTimeout to ensure it's available
+            setTimeout(() => {
+              // @ts-ignore - startGame exists in closure
+              (startGame as any)(questions);
+            }, 0);
+          }
+          return prev;
+
         default:
           return prev;
       }
@@ -465,6 +478,23 @@ export const useLocalMultiplayer = () => {
       sharedQuestions: questions
     }));
   }, [state.isHost, state.room]);
+
+  // Request start of the game (guests will send a request to host; host will start directly)
+  const requestStartGame = useCallback((questions: any[]) => {
+    if (state.isHost) {
+      startGame(questions);
+      return;
+    }
+
+    if (!connectionManager.current) return;
+
+    connectionManager.current.broadcast({
+      type: 'start_request',
+      senderId: localId.current,
+      senderName: localName.current,
+      payload: { questions }
+    });
+  }, [state.isHost, startGame]);
 
   // Submit an answer
   const submitAnswer = useCallback((answer: string) => {
@@ -565,6 +595,7 @@ export const useLocalMultiplayer = () => {
     leaveRoom,
     sendChatMessage,
     startGame,
+    requestStartGame,
     submitAnswer,
     updateScores,
     sendQuestion,

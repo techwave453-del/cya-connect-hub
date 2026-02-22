@@ -32,7 +32,7 @@ const MultiplayerMode = ({ onBack }: MultiplayerModeProps) => {
     joinRoom,
     leaveRoom,
     sendChatMessage,
-    startGame,
+    requestStartGame,
     submitAnswer,
     updateScores,
     sendQuestion,
@@ -80,7 +80,7 @@ const MultiplayerMode = ({ onBack }: MultiplayerModeProps) => {
 
     // Limit to 10 questions for multiplayer
     questions = questions.slice(0, 10);
-    startGame(questions);
+    requestStartGame(questions);
   };
 
   const handleGameEnd = () => {
