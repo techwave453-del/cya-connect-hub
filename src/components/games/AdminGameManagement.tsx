@@ -83,7 +83,9 @@ const AdminGameManagement = () => {
           ...game,
           options: game.options as string[] | null,
           game_type: game.game_type as BibleGame['game_type'],
-          difficulty: game.difficulty as BibleGame['difficulty']
+          difficulty: game.difficulty as BibleGame['difficulty'],
+          bible_story: game.bible_story || null, // Handle missing field gracefully
+          testament: game.testament || null, // Handle missing field gracefully
         })));
       }
     } catch (error) {
