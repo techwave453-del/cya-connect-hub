@@ -20,7 +20,8 @@ export const useQuestionGenerator = () => {
 
   const generateQuestions = useCallback(async (
     gameType: GameType, 
-    count: number = 3
+    count: number = 3,
+    options?: { bible_story?: string | null; testament?: 'old' | 'new' | null }
   ): Promise<GenerateResult | null> => {
     // Prevent duplicate generations within 30 seconds
     const now = Date.now();
@@ -37,8 +38,12 @@ export const useQuestionGenerator = () => {
     try {
       console.log(`Generating ${count} ${gameType} questions...`);
       
+      const body: any = { game_type: gameType, count };
+      if (options?.bible_story) body.bible_story = options.bible_story;
+      if (options?.testament) body.testament = options.testament;
+      
       const { data, error } = await supabase.functions.invoke("generate-game-questions", {
-        body: { game_type: gameType, count },
+        body,
       });
 
       if (error) {

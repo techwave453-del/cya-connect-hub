@@ -14,6 +14,8 @@ export interface BibleGame {
   bible_reference: string | null;
   points: number;
   is_active: boolean;
+  bible_story: string | null;
+  testament: 'old' | 'new' | null;
   created_at: string;
   updated_at: string;
 }

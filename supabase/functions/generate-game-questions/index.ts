@@ -15,6 +15,8 @@ interface GeneratedQuestion {
   difficulty: "easy" | "medium" | "hard";
   bible_reference: string;
   points: number;
+  bible_story?: string;
+  testament?: "old" | "new";
 }
 
 serve(async (req) => {
@@ -23,7 +25,7 @@ serve(async (req) => {
   }
 
   try {
-    const { game_type, count = 3 } = await req.json();
+    const { game_type, count = 3, bible_story, testament } = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -54,38 +56,46 @@ serve(async (req) => {
 
     let systemPrompt = "";
     
+    // Build story context if provided
+    let storyContext = "";
+    if (bible_story) {
+      storyContext = `\nFOCUS ON BIBLE STORY: Generate questions specifically about "${bible_story}".`;
+    } else if (testament) {
+      storyContext = `\nFOCUS ON TESTAMENT: Generate questions from the ${testament === 'old' ? 'Old' : 'New'} Testament.`;
+    }
+    
     if (game_type === "trivia") {
       systemPrompt = `You are a Bible trivia expert. Generate unique, engaging Bible trivia questions that test knowledge of the Holy Bible. 
          Each question should have exactly 4 answer options with one correct answer.
-         Include questions from both Old and New Testament.
+         ${bible_story ? `Focus on the story of "${bible_story}".` : testament ? `Include questions from the ${testament === 'old' ? 'Old' : 'New'} Testament.` : 'Include questions from both Old and New Testament.'}
          Vary difficulty levels: easy (basic facts), medium (requires familiarity), hard (deep knowledge).
          Always include the specific Bible verse reference where the answer can be found.
-         Make questions educational and suitable for Christian fellowship groups.`;
+         Make questions educational and suitable for Christian fellowship groups.${storyContext}`;
     } else if (game_type === "guess_character") {
       systemPrompt = `You are a Bible character expert. Generate "Guess the Character" questions where players identify biblical figures from clues.
          Each question should have 3-4 clues that progressively reveal more about the character.
          Format clues as: "Clue 1: [first clue]\\nClue 2: [second clue]\\nClue 3: [third clue]"
-         Include both major and minor biblical characters.
+         ${bible_story ? `Focus on characters from the story of "${bible_story}".` : testament ? `Include characters from the ${testament === 'old' ? 'Old' : 'New'} Testament.` : 'Include both major and minor biblical characters.'}
          Provide 4 character name options for the answer.
-         Always include a Bible verse reference where this character appears.`;
+         Always include a Bible verse reference where this character appears.${storyContext}`;
     } else if (game_type === "fill_blank") {
       systemPrompt = `You are a Bible verse expert. Generate "Fill in the Blank" questions where players complete famous Bible verses.
          Format the question as: "Complete the verse: '[verse with _____ for missing word(s)]'"
          The blank should replace 1-3 meaningful words (not common words like 'the', 'and', 'a').
          The correct_answer should be the missing word(s) only.
          Provide 4 options including the correct answer and 3 plausible alternatives.
-         Use well-known, impactful verses that Christians commonly memorize.
+         ${bible_story ? `Use verses from the story of "${bible_story}".` : testament ? `Use verses from the ${testament === 'old' ? 'Old' : 'New'} Testament.` : 'Use well-known, impactful verses that Christians commonly memorize.'}
          Always include the specific Bible verse reference.
-         The hint should help recall the verse without giving away the answer.`;
+         The hint should help recall the verse without giving away the answer.${storyContext}`;
     } else if (game_type === "memory_verse") {
       systemPrompt = `You are a Bible memorization expert. Generate Memory Verse challenges for Scripture memorization.
          The question field should describe the verse topic/theme briefly (e.g., "God's love for the world" or "The Lord's guidance").
          The correct_answer field should contain the COMPLETE verse text that players will memorize and arrange.
          Keep verses to 15-30 words for manageable memorization.
-         Select impactful, commonly memorized verses.
+         ${bible_story ? `Select verses from the story of "${bible_story}".` : testament ? `Select verses from the ${testament === 'old' ? 'Old' : 'New'} Testament.` : 'Select impactful, commonly memorized verses.'}
          Provide 4 options with similar verse themes (these are for display, the game uses word arrangement).
          Always include the specific Bible verse reference.
-         The hint should describe the key message or theme of the verse.`;
+         The hint should describe the key message or theme of the verse.${storyContext}`;
     }
 
     const gameTypeLabels: Record<string, string> = {
@@ -247,6 +257,8 @@ Return the response using the generate_questions function.`;
         bible_reference: sanitizeText(q.bible_reference),
         points: q.points,
         is_active: true,
+        bible_story: bible_story || null,
+        testament: testament || null,
       };
     });
 
