@@ -29,11 +29,15 @@ const BibleTrivia = ({ onGameEnd }: BibleTriviaProps) => {
 
   // Prioritize unanswered questions
   useEffect(() => {
+    // Initialize shuffledGames once when games load (or when answeredLoading finishes),
+    // but do NOT re-run whenever answeredIds changes to avoid reshuffling mid-game.
     if (games.length > 0 && !answeredLoading) {
       const prioritized = getUnansweredFirst(games);
       setShuffledGames(prioritized);
     }
-  }, [games, answeredLoading, getUnansweredFirst]);
+    // intentionally omit getUnansweredFirst from deps to prevent reshuffle when answeredIds updates
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [games, answeredLoading]);
 
   // Load local progress
   useEffect(() => {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Plus, MessageCircle, ArrowLeft, Home } from "lucide-react";
 import Header from "@/components/Header";
 import BibleAIChat from '@/components/BibleAIChat';
@@ -20,6 +20,7 @@ const ChatPage = () => {
   const { conversations, loading: convsLoading, refetch } = useConversations(user?.id);
   const { onlineUsers } = useChatPresence(user?.id);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const location = useLocation();
   const [newConversationOpen, setNewConversationOpen] = useState(false);
   const isMobile = useIsMobile();
 
@@ -28,6 +29,23 @@ const ChatPage = () => {
       navigate("/auth");
     }
   }, [authLoading, isAuthenticated, navigate]);
+
+  // If navigated with state to open AI, select the AI conversation
+  useEffect(() => {
+    if (location?.state && (location as any).state.openAI) {
+      setSelectedConversation({
+        id: 'ai-scripture-guide',
+        name: 'Scripture Guide',
+        is_group: false,
+        created_by: 'system',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        participants: [],
+      });
+      // clear history state to avoid reopening repeatedly
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   const handleConversationCreated = async (conversationId: string) => {
     await refetch();

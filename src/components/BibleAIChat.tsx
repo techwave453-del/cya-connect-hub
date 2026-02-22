@@ -61,9 +61,11 @@ const generateStoryQuestions = (storyTitle: string, refs: string[]): string[] =>
 interface BibleAIChatProps {
   isOpen: boolean;
   onClose: () => void;
+  initialMessage?: string;
+  autoSend?: boolean;
 }
 
-const BibleAIChat = ({ isOpen, onClose }: BibleAIChatProps) => {
+const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: BibleAIChatProps) => {
   const [input, setInput] = useState('');
   const [replyTo, setReplyTo] = useState<{ index: number; content: string } | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
@@ -87,6 +89,20 @@ const BibleAIChat = ({ isOpen, onClose }: BibleAIChatProps) => {
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [isOpen, showSavedChats]);
+
+  // Prefill input when opened with an initial message and optionally auto-send
+  useEffect(() => {
+    if (isOpen && initialMessage) {
+      setInput(initialMessage);
+      if (autoSend) {
+        setTimeout(() => {
+          handleSend();
+        }, 250);
+      }
+    }
+    // only run when isOpen or initialMessage changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, initialMessage, autoSend]);
 
   const handleSend = () => {
     if (!input.trim() || isLoading) return;

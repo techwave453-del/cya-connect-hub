@@ -27,6 +27,7 @@ import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import GroupManagementDialog from "./GroupManagementDialog";
+import BibleAIChat from "@/components/BibleAIChat";
 
 const EMOJI_LIST = ["😀", "😂", "😍", "🥰", "😊", "🙏", "❤️", "🔥", "👍", "👏", "🎉", "✨", "💯", "🙌", "😇", "🤗"];
 
@@ -45,6 +46,8 @@ const ChatView = ({ conversation, currentUserId, onConversationUpdate }: ChatVie
   const [messageToDelete, setMessageToDelete] = useState<Message | null>(null);
   const [isGroupAdmin, setIsGroupAdmin] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showAIChat, setShowAIChat] = useState(false);
+  const [aiPrefill, setAiPrefill] = useState<string | undefined>(undefined);
   const scrollRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const navigate = useNavigate();
@@ -99,6 +102,16 @@ const ChatView = ({ conversation, currentUserId, onConversationUpdate }: ChatVie
       clearTimeout(typingTimeoutRef.current);
     }
     setTyping(false);
+
+    // Detect AI tag in message (e.g., @ai or @scripture)
+    const aiTagMatch = newMessage.match(/@(?:ai|scripture)\b/i);
+    if (aiTagMatch) {
+      // Prefill AI chat with the message content sans tag and open AI panel
+      const cleaned = newMessage.replace(/@(?:ai|scripture)\b/i, '').trim();
+      setAiPrefill(cleaned || undefined);
+      setShowAIChat(true);
+      return;
+    }
 
     setSending(true);
     try {
@@ -345,6 +358,8 @@ const ChatView = ({ conversation, currentUserId, onConversationUpdate }: ChatVie
           </Button>
         </div>
       </div>
+      {/* AI Chat modal for '@ai' tagging */}
+      <BibleAIChat isOpen={showAIChat} onClose={() => { setShowAIChat(false); setAiPrefill(undefined); }} initialMessage={aiPrefill} autoSend={true} />
 
       {/* Group Management Dialog */}
       {conversation.is_group && (
