@@ -218,17 +218,37 @@ Return the response using the generate_questions function.`;
     console.log(`Generated ${questions.length} questions`);
 
     // Save questions to database
-    const questionsToInsert = questions.map((q) => ({
-      game_type,
-      question: q.question,
-      options: q.options,
-      correct_answer: q.correct_answer,
-      hint: q.hint,
-      difficulty: q.difficulty,
-      bible_reference: q.bible_reference,
-      points: q.points,
-      is_active: true,
-    }));
+    // Helper to sanitize text: remove CJK characters and control characters, trim whitespace
+    const sanitizeText = (s: string | null | undefined) => {
+      if (!s) return '';
+      // Remove CJK (Han/Kana) scripts which sometimes get injected, and control chars
+      let cleaned = s.replace(/\p{Script=Han}|\p{Script=Hiragana}|\p{Script=Katakana}/gu, '');
+      cleaned = cleaned.replace(/[\x00-\x1F\x7F]/g, '');
+      // Collapse multiple spaces and trim
+      cleaned = cleaned.replace(/\s+/g, ' ').trim();
+      return cleaned;
+    };
+
+    const questionsToInsert = questions.map((q) => {
+      const options = (q.options || []).map((opt) => sanitizeText(opt));
+      const correct = sanitizeText(q.correct_answer);
+      // Ensure correct answer is one of the options after sanitization; if not, add it
+      if (correct && !options.includes(correct)) {
+        options[0] = correct; // prefer correct answer first to keep 4 options
+      }
+
+      return {
+        game_type,
+        question: sanitizeText(q.question),
+        options,
+        correct_answer: correct,
+        hint: sanitizeText(q.hint),
+        difficulty: q.difficulty,
+        bible_reference: sanitizeText(q.bible_reference),
+        points: q.points,
+        is_active: true,
+      };
+    });
 
     const { data: insertedData, error: insertError } = await supabase
       .from("bible_games")
