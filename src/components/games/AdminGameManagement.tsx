@@ -693,9 +693,9 @@ const AdminGameManagement = () => {
         {games.filter(g => filterType === 'all' ? true : g.game_type === filterType).map((game) => (
           <Card key={game.id} className="bg-card border-border">
             <CardHeader className="pb-2">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className="text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary">
                       {game.game_type.replace('_', ' ')}
                     </span>
@@ -712,24 +712,26 @@ const AdminGameManagement = () => {
                       </span>
                     )}
                   </div>
-                  <CardTitle className="text-sm font-medium line-clamp-2">
+                  <CardTitle className="text-sm md:text-base font-medium line-clamp-3 break-words">
                     {game.question}
                   </CardTitle>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-1 mt-2 sm:mt-0">
                   <Button
-                    size="icon"
+                    size="sm"
                     variant="ghost"
-                    className="h-8 w-8"
+                    className="h-8 w-8 sm:h-8 sm:w-8"
                     onClick={() => handleEdit(game)}
+                    aria-label="Edit question"
                   >
                     <Pencil className="w-4 h-4" />
                   </Button>
                   <Button
-                    size="icon"
+                    size="sm"
                     variant="ghost"
                     className="h-8 w-8 text-destructive hover:text-destructive"
                     onClick={() => handleDelete(game.id)}
+                    aria-label="Delete question"
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
@@ -737,9 +739,16 @@ const AdminGameManagement = () => {
               </div>
             </CardHeader>
             <CardContent className="pt-0">
-              <p className="text-xs text-muted-foreground">
-                Answer: {game.correct_answer} • {game.points} pts
-                {game.bible_reference && ` • ${game.bible_reference}`}
+              <p className="text-xs sm:text-sm text-muted-foreground break-words">
+                <span className="font-medium">Answer:</span> <span className="break-words">{game.correct_answer}</span>
+                <span className="mx-1">•</span>
+                <span className="font-medium">Points:</span> {game.points}
+                {game.bible_reference && (
+                  <>
+                    <span className="mx-1">•</span>
+                    <span className="break-words">{game.bible_reference}</span>
+                  </>
+                )}
               </p>
             </CardContent>
           </Card>
