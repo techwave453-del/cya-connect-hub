@@ -320,12 +320,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (existing) {
         existing.remove();
       }
-
       if (!payload) {
-        body.style.backgroundImage = '';
-        body.style.backgroundRepeat = '';
-        body.style.backgroundSize = '';
-        body.style.backgroundPosition = '';
+        document.documentElement.style.setProperty('--app-bg-image', "'" + "" + "'");
         return;
       }
 
@@ -348,16 +344,13 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         video.style.zIndex = '-1';
         video.style.pointerEvents = 'none';
         document.body.prepend(video);
-        // clear CSS background image
-        body.style.backgroundImage = '';
+        // clear CSS background image variable
+        document.documentElement.style.setProperty('--app-bg-image', "''");
       } else if (imageUrl) {
-        body.style.backgroundImage = `url('${imageUrl}')`;
-        body.style.backgroundRepeat = 'no-repeat';
-        body.style.backgroundSize = 'cover';
-        body.style.backgroundPosition = 'center';
+        document.documentElement.style.setProperty('--app-bg-image', `url('${imageUrl}')`);
       } else {
         // clear
-        body.style.backgroundImage = '';
+        document.documentElement.style.setProperty('--app-bg-image', "''");
       }
     } catch (err) {
       console.error('Error applying background:', err);
