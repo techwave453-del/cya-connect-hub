@@ -134,8 +134,10 @@ const GamesPage = () => {
         )}
       </main>
 
-      {/* Floating Leaderboard */}
-      <FloatingLeaderboard gameType={selectedGame || undefined} />
+      {/* Floating Leaderboard - hide when in local multiplayer (MultiplayerMode renders its own session leaderboard) */}
+      {selectedGame !== 'multiplayer' && (
+        <FloatingLeaderboard gameType={selectedGame || undefined} />
+      )}
     </div>
   );
 };
