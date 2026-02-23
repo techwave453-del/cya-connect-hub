@@ -37,6 +37,7 @@ const MultiplayerMode = ({ onBack }: MultiplayerModeProps) => {
     submitAnswer,
     updateScores,
     sendQuestion,
+    sendClue,
     isWebRTCSupported,
     isBluetoothSupported,
     sharedQuestions
@@ -225,18 +226,29 @@ const MultiplayerMode = ({ onBack }: MultiplayerModeProps) => {
 
   // Game in progress
   return (
-    <div className="space-y-4">
-      <MultiplayerGame
-        room={room}
-        gameState={gameState}
-        questions={sharedQuestions}
-        localId={localId}
-        isHost={isHost}
-        onSubmitAnswer={submitAnswer}
-        onUpdateScores={updateScores}
-        onSendQuestion={sendQuestion}
-        onGameEnd={handleGameEnd}
-      />
+    <div className="space-y-4 md:flex md:gap-4">
+      <div className="flex-1">
+        <MultiplayerGame
+          room={room}
+          gameState={gameState}
+          questions={sharedQuestions}
+          localId={localId}
+          isHost={isHost}
+          onSubmitAnswer={submitAnswer}
+          onUpdateScores={updateScores}
+          onSendQuestion={sendQuestion}
+          onGameEnd={handleGameEnd}
+          onSendClue={sendClue}
+        />
+      </div>
+
+      <div className="w-full md:w-80">
+        <LocalChat
+          messages={messages}
+          localId={localId}
+          onSendMessage={sendChatMessage}
+        />
+      </div>
     </div>
   );
 };

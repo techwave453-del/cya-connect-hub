@@ -19,6 +19,7 @@ interface MultiplayerGameProps {
   onUpdateScores: (scores: Record<string, number>, phase?: string, roundWinner?: string) => void;
   onSendQuestion: (question: any, index: number, timer?: number) => void;
   onGameEnd: () => void;
+  onSendClue?: (text: string) => void;
 }
 
 const MultiplayerGame = ({
@@ -30,7 +31,8 @@ const MultiplayerGame = ({
   onSubmitAnswer,
   onUpdateScores,
   onSendQuestion,
-  onGameEnd
+  onGameEnd,
+  onSendClue
 }: MultiplayerGameProps) => {
   const [timer, setTimer] = useState(30);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
@@ -368,6 +370,22 @@ const MultiplayerGame = ({
                 <CheckCircle className="w-4 h-4 text-green-500" />
                 Answer submitted! Waiting for others...
               </p>
+            </div>
+          )}
+
+          {/* Cooperative clue button */}
+          {!isCompetitive && onSendClue && (
+            <div className="pt-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const clue = window.prompt('Enter a short clue to help your teammates:');
+                  if (clue && clue.trim()) onSendClue(clue.trim());
+                }}
+                className="w-full"
+              >
+                Give Clue
+              </Button>
             </div>
           )}
         </CardContent>

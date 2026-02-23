@@ -49,35 +49,37 @@ const LocalChat = ({ messages, localId, onSendMessage, className }: LocalChatPro
       </CardHeader>
       <CardContent className="p-0">
         <ScrollArea className="h-48 px-4" ref={scrollRef}>
-          {chatMessages.length === 0 ? (
+              {chatMessages.length === 0 ? (
             <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
               No messages yet
             </div>
           ) : (
             <div className="space-y-2 py-2">
-              {chatMessages.map((msg, index) => (
-                <div
-                  key={index}
-                  className={cn(
-                    "flex flex-col",
-                    msg.senderId === localId ? "items-end" : "items-start"
-                  )}
-                >
-                  <span className="text-xs text-muted-foreground mb-0.5">
-                    {msg.senderName}
-                  </span>
+              {chatMessages.map((msg, index) => {
+                const isLocal = msg.senderId === localId;
+                const isClue = msg.payload?.kind === 'clue';
+                return (
                   <div
+                    key={index}
                     className={cn(
-                      "px-3 py-2 rounded-lg max-w-[80%] text-sm",
-                      msg.senderId === localId
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted"
+                      "flex flex-col",
+                      isLocal ? "items-end" : "items-start"
                     )}
                   >
-                    {msg.payload.text}
+                    <span className="text-xs text-muted-foreground mb-0.5">
+                      {msg.senderName}{isClue ? ' • Clue' : ''}
+                    </span>
+                    <div
+                      className={cn(
+                        "px-3 py-2 rounded-lg max-w-[80%] text-sm",
+                        isLocal ? "bg-primary text-primary-foreground" : isClue ? "bg-amber-500/10 text-amber-700" : "bg-muted"
+                      )}
+                    >
+                      {msg.payload.text}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </ScrollArea>

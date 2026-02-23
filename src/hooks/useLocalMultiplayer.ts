@@ -498,6 +498,26 @@ export const useLocalMultiplayer = () => {
     }));
   }, []);
 
+  // Send a cooperative clue (uses chat payload with kind='clue')
+  const sendClue = useCallback((text: string) => {
+    if (!connectionManager.current) return;
+
+    const message: Omit<GameMessage, 'timestamp'> = {
+      type: 'chat',
+      senderId: localId.current,
+      senderName: localName.current,
+      payload: { text, kind: 'clue' }
+    };
+
+    connectionManager.current.broadcast(message);
+
+    // Also append locally
+    setState(prev => ({
+      ...prev,
+      messages: [...prev.messages, { ...message, timestamp: Date.now() }]
+    }));
+  }, []);
+
   // Start the game (host only)
   const startGame = useCallback((questions: any[]) => {
     if (!state.isHost || !connectionManager.current) return;
@@ -684,6 +704,7 @@ export const useLocalMultiplayer = () => {
     joinRoom,
     leaveRoom,
     sendChatMessage,
+    sendClue,
     startGame,
     requestStartGame,
     submitAnswer,
