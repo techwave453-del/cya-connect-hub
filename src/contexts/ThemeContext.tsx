@@ -143,6 +143,23 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     };
 
+    // Fetch and apply background settings (image/video)
+    const fetchBackground = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('app_settings')
+          .select('value')
+          .eq('key', 'background')
+          .maybeSingle();
+        if (!error && data?.value) {
+          const payload = data.value as { imageUrl?: string | null; videoUrl?: string | null };
+          applyBackground(payload);
+        }
+      } catch (err) {
+        console.error('Error fetching background:', err);
+      }
+    };
+
     // Check local storage first for faster initial load
     const savedTheme = localStorage.getItem('app-theme');
     if (savedTheme) {
@@ -155,25 +172,35 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     fetchTheme();
+    fetchBackground();
 
     // Listen for real-time theme changes
-    const channel = supabase
-      .channel('theme-changes')
+    const channel = supabase.channel('app-settings-changes')
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
           table: 'app_settings',
-          filter: 'key=eq.theme'
         },
         (payload) => {
-          const themeName = (payload.new.value as { name: string }).name;
-          const foundTheme = themes.find(t => t.name === themeName);
-          if (foundTheme) {
-            setCurrentTheme(foundTheme);
-            applyTheme(foundTheme);
-            localStorage.setItem('app-theme', JSON.stringify(foundTheme));
+          try {
+            const key = payload.new.key;
+            if (key === 'theme') {
+              const themeName = (payload.new.value as { name: string }).name;
+              const foundTheme = themes.find(t => t.name === themeName);
+              if (foundTheme) {
+                setCurrentTheme(foundTheme);
+                applyTheme(foundTheme);
+                localStorage.setItem('app-theme', JSON.stringify(foundTheme));
+              }
+            }
+            if (key === 'background') {
+              const payloadVal = payload.new.value as { imageUrl?: string | null; videoUrl?: string | null };
+              applyBackground(payloadVal);
+            }
+          } catch (err) {
+            console.error('Error handling app_settings change:', err);
           }
         }
       )
@@ -268,6 +295,59 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setCurrentTheme(theme);
     applyTheme(theme);
     localStorage.setItem('app-theme', JSON.stringify(theme));
+  };
+
+  // Apply background image or video globally
+  const applyBackground = (payload: { imageUrl?: string | null; videoUrl?: string | null } | null) => {
+    try {
+      const body = document.body;
+      // remove existing video if any
+      const existing = document.getElementById('app-bg-video');
+      if (existing) {
+        existing.remove();
+      }
+
+      if (!payload) {
+        body.style.backgroundImage = '';
+        body.style.backgroundRepeat = '';
+        body.style.backgroundSize = '';
+        body.style.backgroundPosition = '';
+        return;
+      }
+
+      const { imageUrl, videoUrl } = payload;
+      if (videoUrl) {
+        // create a fixed video element behind app content
+        const video = document.createElement('video');
+        video.id = 'app-bg-video';
+        video.src = videoUrl;
+        video.autoplay = true;
+        video.muted = true;
+        video.loop = true;
+        video.playsInline = true;
+        video.style.position = 'fixed';
+        video.style.top = '0';
+        video.style.left = '0';
+        video.style.width = '100%';
+        video.style.height = '100%';
+        video.style.objectFit = 'cover';
+        video.style.zIndex = '-1';
+        video.style.pointerEvents = 'none';
+        document.body.prepend(video);
+        // clear CSS background image
+        body.style.backgroundImage = '';
+      } else if (imageUrl) {
+        body.style.backgroundImage = `url('${imageUrl}')`;
+        body.style.backgroundRepeat = 'no-repeat';
+        body.style.backgroundSize = 'cover';
+        body.style.backgroundPosition = 'center';
+      } else {
+        // clear
+        body.style.backgroundImage = '';
+      }
+    } catch (err) {
+      console.error('Error applying background:', err);
+    }
   };
 
   return (
