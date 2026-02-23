@@ -33,6 +33,7 @@ const MultiplayerMode = ({ onBack }: MultiplayerModeProps) => {
     leaveRoom,
     sendChatMessage,
     requestStartGame,
+    updateRoomSettings,
     submitAnswer,
     updateScores,
     sendQuestion,
@@ -79,7 +80,8 @@ const MultiplayerMode = ({ onBack }: MultiplayerModeProps) => {
     }
 
     // Limit to 10 questions for multiplayer
-    questions = questions.slice(0, 10);
+    const perRound = room?.questionsPerRound || 10;
+    questions = questions.slice(0, perRound);
     requestStartGame(questions);
   };
 
@@ -209,6 +211,7 @@ const MultiplayerMode = ({ onBack }: MultiplayerModeProps) => {
           connectionStatus={connectionStatus}
           onStartGame={handleStartGame}
           onLeaveRoom={leaveRoom}
+          onUpdateRoomSettings={updateRoomSettings}
         />
 
         <LocalChat

@@ -254,9 +254,25 @@ const MultiplayerGame = ({
           )}
 
           {!isHost && (
-            <p className="text-center text-sm text-muted-foreground">
-              Waiting for host to continue...
-            </p>
+            <div className="space-y-2">
+              <p className="text-center text-sm text-muted-foreground">
+                Waiting for host to continue...
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => {
+                    // Ask host to return to lobby
+                    // Broadcast a lobby_request on data channel
+                    // We emit a custom event via window so the hook can pick it up via connection manager
+                    const event = new CustomEvent('multiplayer-lobby-request');
+                    window.dispatchEvent(event);
+                  }}
+                  variant="ghost"
+                >
+                  Return to Lobby
+                </Button>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

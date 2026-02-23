@@ -92,6 +92,7 @@ export const useLocalMultiplayer = () => {
         ready: true
       }],
       status: 'waiting',
+      questionsPerRound: maxPlayers >= 1 ? 10 : 10,
       createdAt: Date.now()
     };
 
@@ -169,6 +170,24 @@ export const useLocalMultiplayer = () => {
 
     return roomId;
   }, []);
+
+  // Update room settings (host only) and broadcast to peers
+  const updateRoomSettings = useCallback((settings: Partial<GameRoom>) => {
+    if (!state.isHost || !connectionManager.current) return;
+
+    setState(prev => {
+      const updatedRoom = prev.room ? { ...prev.room, ...settings } : prev.room;
+      if (updatedRoom) {
+        connectionManager.current?.broadcast({
+          type: 'room_update',
+          senderId: localId.current,
+          senderName: localName.current,
+          payload: { room: updatedRoom }
+        });
+      }
+      return { ...prev, room: updatedRoom };
+    });
+  }, [state.isHost]);
 
   // Join an existing room (guest)
   const joinRoom = useCallback(async (roomCode: string, passcode: string) => {
@@ -425,6 +444,27 @@ export const useLocalMultiplayer = () => {
           }
           return prev;
 
+        case 'lobby_request':
+          // Guest requested to return to lobby; if we're host, set room.status back to 'waiting'
+          if (prev.isHost && connectionManager.current && prev.room) {
+            const updatedRoom = { ...prev.room, status: 'waiting' };
+            connectionManager.current.broadcast({
+              type: 'room_update',
+              senderId: localId.current,
+              senderName: localName.current,
+              payload: { room: updatedRoom }
+            });
+            return { ...prev, room: updatedRoom, gameState: null };
+          }
+          return prev;
+
+        case 'lobby_update':
+          // Host has updated lobby status or settings
+          return {
+            ...prev,
+            room: message.payload.room
+          };
+
         default:
           return prev;
       }
@@ -599,6 +639,35 @@ export const useLocalMultiplayer = () => {
     };
   }, []);
 
+  // Listen for UI-driven lobby request events (from MultiplayerGame button)
+  useEffect(() => {
+    const handler = () => {
+      if (!connectionManager.current) return;
+      if (state.isHost && state.room) {
+        // Host can just set room back to waiting
+        const updatedRoom = { ...state.room, status: 'waiting' };
+        connectionManager.current.broadcast({
+          type: 'room_update',
+          senderId: localId.current,
+          senderName: localName.current,
+          payload: { room: updatedRoom }
+        });
+        setState(prev => ({ ...prev, room: updatedRoom, gameState: null }));
+      } else {
+        // Guest requests host to switch back to lobby
+        connectionManager.current.broadcast({
+          type: 'lobby_request',
+          senderId: localId.current,
+          senderName: localName.current,
+          payload: {}
+        });
+      }
+    };
+
+    window.addEventListener('multiplayer-lobby-request', handler as EventListener);
+    return () => window.removeEventListener('multiplayer-lobby-request', handler as EventListener);
+  }, [state.isHost, state.room]);
+
   return {
     ...state,
     localId: localId.current,
@@ -612,6 +681,7 @@ export const useLocalMultiplayer = () => {
     submitAnswer,
     updateScores,
     sendQuestion,
+    updateRoomSettings,
     isWebRTCSupported: isWebRTCAvailable(),
     isBluetoothSupported: isBluetoothAvailable()
   };

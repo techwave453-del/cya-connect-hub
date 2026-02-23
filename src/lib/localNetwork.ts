@@ -30,6 +30,8 @@ export interface GameRoom {
   maxPlayers: number;
   currentPlayers: LocalPeer[];
   status: 'waiting' | 'playing' | 'finished';
+  // Number of questions per game/round (optional)
+  questionsPerRound?: number;
   createdAt: number;
 }
 

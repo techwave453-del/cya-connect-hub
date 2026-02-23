@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Copy, Users, Crown, Wifi, Bluetooth, Play, LogOut, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +17,7 @@ interface GameLobbyProps {
   connectionStatus: 'disconnected' | 'connecting' | 'connected';
   onStartGame: () => void;
   onLeaveRoom: () => void;
+  onUpdateRoomSettings?: (settings: Partial<GameRoom>) => void;
 }
 
 const GameLobby = ({
@@ -28,6 +29,11 @@ const GameLobby = ({
   onStartGame,
   onLeaveRoom
 }: GameLobbyProps) => {
+  const [questionsCount, setQuestionsCount] = useState<number>(room?.questionsPerRound || 10);
+  // Keep local input in sync when room settings change
+  useEffect(() => {
+    setQuestionsCount(room?.questionsPerRound || 10);
+  }, [room?.questionsPerRound]);
   const copyRoomCode = () => {
     if (room?.id) {
       navigator.clipboard.writeText(room.id);
@@ -165,14 +171,40 @@ const GameLobby = ({
             <LogOut className="w-4 h-4" />
             Leave
           </Button>
-          <Button
-            onClick={onStartGame}
-            disabled={!canStart}
-            className="flex-1 gap-2"
-          >
-            <Play className="w-4 h-4" />
-            {isHost ? 'Start Game' : 'Request Start'}
-          </Button>
+          <div className="flex gap-2 w-full">
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={1}
+                max={50}
+                value={questionsCount}
+                onChange={(e) => setQuestionsCount(Number(e.target.value))}
+                className="w-24"
+              />
+              <span className="text-sm text-muted-foreground">Questions</span>
+            </div>
+
+            <Button
+              onClick={() => {
+                if (isHost && onUpdateRoomSettings) {
+                  onUpdateRoomSettings({ questionsPerRound: questionsCount });
+                }
+              }}
+              variant="outline"
+              className="gap-2"
+            >
+              Save
+            </Button>
+
+            <Button
+              onClick={onStartGame}
+              disabled={!canStart}
+              className="flex-1 gap-2"
+            >
+              <Play className="w-4 h-4" />
+              {isHost ? 'Start Game' : 'Request Start'}
+            </Button>
+          </div>
         </div>
 
         {!canStart && allPlayers.length < 2 && (
