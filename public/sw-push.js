@@ -29,6 +29,18 @@ self.addEventListener('push', function(event) {
     }
   }
 
+  // Determine target URL based on payload type
+  let targetUrl = '/';
+  if (data.data) {
+    if (data.data.type === 'message' && data.data.conversationId) {
+      targetUrl = `/chat?conversation=${data.data.conversationId}`;
+    } else if (data.data.type === 'daily_verse' && data.data.verseId) {
+      targetUrl = `/daily-verse?verse=${encodeURIComponent(data.data.verseId)}`;
+    } else if (data.data.url) {
+      targetUrl = data.data.url;
+    }
+  }
+
   // Notification options for maximum visibility
   const options = {
     body: data.body,
@@ -37,16 +49,14 @@ self.addEventListener('push', function(event) {
     image: data.image, // Optional large image
     tag: data.tag || `notification-${Date.now()}`, // Prevents duplicate notifications
     renotify: true, // Always notify even if same tag
-    requireInteraction: true, // Keep notification visible until user interacts
-    silent: false, // Play notification sound
-    vibrate: [200, 100, 200, 100, 200], // Strong vibration pattern
+    requireInteraction: !!data.requireInteraction || true, // Keep notification visible until user interacts
+    silent: !!data.silent || false, // Play notification sound when false
+    vibrate: data.vibrate || [200, 100, 200], // Vibration pattern
     data: {
-      url: data.data?.url || data.data?.conversationId 
-        ? `/chat?conversation=${data.data.conversationId}` 
-        : '/',
+      url: targetUrl,
       ...data.data
     },
-    actions: [
+    actions: data.actions || [
       { action: 'open', title: 'View', icon: '/pwa-192x192.png' },
       { action: 'dismiss', title: 'Dismiss' }
     ],
