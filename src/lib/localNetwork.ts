@@ -365,11 +365,13 @@ export class PeerConnectionManager {
       } else if (pc.connectionState === 'disconnected') {
         console.warn('⚠ Connection DISCONNECTED with peer:', peerId);
         this.dataChannels.delete(peerId);
+        this.onPeerDisconnectedCallback?.(peerId);
       } else if (pc.connectionState === 'closed') {
         console.warn('Connection CLOSED with peer:', peerId);
         this.dataChannels.delete(peerId);
         this.pendingConnections.delete(peerId);
         this.connections.delete(peerId);
+        this.onPeerDisconnectedCallback?.(peerId);
       }
     };
 
@@ -396,9 +398,30 @@ export class PeerConnectionManager {
 
   private async handleOffer(fromId: string, offer: RTCSessionDescriptionInit, senderName: string) {
     if (this.connections.has(fromId)) {
-      // Already have a connection, ignore
-      console.log('Already have connection with peer:', fromId, 'ignoring offer');
-      return;
+      const existing = this.connections.get(fromId);
+      // If existing connection is closed/failed/disconnected, clean up and accept the new offer
+      const shouldReplace = existing && (
+        (existing.connectionState === 'closed') ||
+        (existing.connectionState === 'failed') ||
+        (existing.iceConnectionState === 'failed') ||
+        (existing.iceConnectionState === 'disconnected')
+      );
+
+      if (shouldReplace) {
+        console.warn('Replacing stale/failed connection with peer:', fromId);
+        try {
+          existing?.close();
+        } catch (e) {
+          /* ignore */
+        }
+        this.dataChannels.delete(fromId);
+        this.pendingConnections.delete(fromId);
+        this.connections.delete(fromId);
+      } else {
+        // Active connection exists; ignore duplicate offer
+        console.log('Already have active connection with peer:', fromId, 'ignoring offer');
+        return;
+      }
     }
 
     console.log('Received offer from peer:', fromId, '(' + senderName + ')');
@@ -428,11 +451,13 @@ export class PeerConnectionManager {
       } else if (pc.connectionState === 'disconnected') {
         console.warn('⚠ Connection DISCONNECTED with peer:', fromId);
         this.dataChannels.delete(fromId);
+        this.onPeerDisconnectedCallback?.(fromId);
       } else if (pc.connectionState === 'closed') {
         console.warn('Connection CLOSED with peer:', fromId);
         this.dataChannels.delete(fromId);
         this.pendingConnections.delete(fromId);
         this.connections.delete(fromId);
+        this.onPeerDisconnectedCallback?.(fromId);
       }
     };
 
@@ -494,6 +519,8 @@ export class PeerConnectionManager {
     channel.onclose = () => {
       console.log('× Data channel CLOSED with peer:', peerId);
       this.dataChannels.delete(peerId);
+      // Notify listeners that peer disconnected
+      this.onPeerDisconnectedCallback?.(peerId);
       // Keep pending connection state in case of transient close
       // Only remove from pending if it was actually failed
     };
