@@ -12,10 +12,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useTheme, themes } from "@/contexts/ThemeContext";
+// theme control moved to user profile settings; Admin controls background media
 import { useTasks, Task } from "@/hooks/useTasks";
 import { useActivities, Activity } from "@/hooks/useActivities";
-import { Shield, Users, Palette, BookOpen, Plus, Trash2, RefreshCw, ArrowLeft, ListTodo, CalendarDays, Pencil, Gamepad2, Image } from "lucide-react";
+import { Shield, Users, BookOpen, Plus, Trash2, RefreshCw, ArrowLeft, ListTodo, CalendarDays, Pencil, Gamepad2, Image } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,7 +58,6 @@ const AdminPage = () => {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdmin();
   const { toast } = useToast();
-  const { currentTheme, setTheme } = useTheme();
   const { tasks, fetchTasks, createTask, updateTask, deleteTask } = useTasks();
   const { activities, fetchActivities, createActivity, updateActivity, deleteActivity } = useActivities();
 
@@ -135,6 +134,38 @@ const AdminPage = () => {
       .select('*')
       .order('day_of_year', { ascending: true });
     if (verseData) setVerses(verseData);
+
+    // Fetch background setting if present
+    const { data: bgData } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'background')
+      .maybeSingle();
+    if (bgData?.value) {
+      try {
+        const parsed = bgData.value as { imageUrl?: string; videoUrl?: string };
+        setBackgroundImage(parsed.imageUrl || "");
+        setBackgroundVideo(parsed.videoUrl || "");
+      } catch {}
+    }
+  };
+
+  const [backgroundImage, setBackgroundImage] = useState("");
+  const [backgroundVideo, setBackgroundVideo] = useState("");
+
+  const handleSaveBackground = async () => {
+    setLoadingAction(true);
+    const payload = { imageUrl: backgroundImage || null, videoUrl: backgroundVideo || null };
+    const { error } = await supabase
+      .from('app_settings')
+      .upsert({ key: 'background', value: payload, updated_by: user?.id }, { onConflict: 'key' });
+
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Background updated' });
+    }
+    setLoadingAction(false);
   };
 
   const handleAddAdminEmail = async () => {
@@ -254,25 +285,7 @@ const AdminPage = () => {
     setLoadingAction(false);
   };
 
-  const handleThemeChange = async (theme: typeof themes[0]) => {
-    setLoadingAction(true);
-    
-    const { error } = await supabase
-      .from('app_settings')
-      .update({ 
-        value: { name: theme.name, primary: theme.primary, secondary: theme.secondary },
-        updated_by: user?.id
-      })
-      .eq('key', 'theme');
-
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
-      setTheme(theme);
-      toast({ title: `Theme changed to ${theme.label}` });
-    }
-    setLoadingAction(false);
-  };
+  
 
   const handleAddVerse = async () => {
     if (!newVerseReference.trim() || !newVerseText.trim()) {
@@ -470,9 +483,9 @@ const AdminPage = () => {
               <CalendarDays className="h-4 w-4" />
               Activities
             </TabsTrigger>
-            <TabsTrigger value="themes" className="gap-2">
-              <Palette className="h-4 w-4" />
-              Themes
+            <TabsTrigger value="background" className="gap-2">
+              <Image className="h-4 w-4" />
+              Background
             </TabsTrigger>
             <TabsTrigger value="verses" className="gap-2">
               <BookOpen className="h-4 w-4" />
@@ -975,42 +988,39 @@ const AdminPage = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="themes" className="space-y-6">
+          <TabsContent value="background" className="space-y-6">
             <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle>App Theme</CardTitle>
-                <CardDescription>Choose a color scheme for the entire app. Changes apply to all users.</CardDescription>
+                <CardTitle>Background Media</CardTitle>
+                <CardDescription>Set a background image or a background video for the app (applies to global app settings).</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {themes.map((theme) => (
-                    <button
-                      key={theme.name}
-                      onClick={() => handleThemeChange(theme)}
-                      disabled={loadingAction}
-                      className={`p-4 rounded-lg border-2 transition-all ${
-                        currentTheme.name === theme.name
-                          ? 'border-primary ring-2 ring-primary/50'
-                          : 'border-border hover:border-primary/50'
-                      }`}
-                    >
-                      <div className="flex gap-2 mb-3">
-                        <div
-                          className="w-6 h-6 rounded-full"
-                          style={{ backgroundColor: `hsl(${theme.primary})` }}
-                        />
-                        <div
-                          className="w-6 h-6 rounded-full"
-                          style={{ backgroundColor: `hsl(${theme.background})` }}
-                        />
-                        <div
-                          className="w-6 h-6 rounded-full border"
-                          style={{ backgroundColor: `hsl(${theme.foreground})` }}
-                        />
-                      </div>
-                      <p className="text-sm font-medium text-foreground">{theme.label}</p>
-                    </button>
-                  ))}
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Background Image URL</Label>
+                  <Input placeholder="https://...jpg" value={backgroundImage} onChange={(e) => setBackgroundImage(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Background Video URL (mp4)</Label>
+                  <Input placeholder="https://...mp4" value={backgroundVideo} onChange={(e) => setBackgroundVideo(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Preview</Label>
+                  <div className="rounded-lg overflow-hidden bg-secondary/20 p-2">
+                    {backgroundVideo ? (
+                      <video src={backgroundVideo} controls className="w-full max-h-60 object-cover" />
+                    ) : backgroundImage ? (
+                      // eslint-disable-next-line jsx-a11y/media-has-caption
+                      <img src={backgroundImage} alt="Background preview" className="w-full max-h-60 object-cover" />
+                    ) : (
+                      <p className="text-muted-foreground">No background set</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleSaveBackground} disabled={loadingAction}>Save Background</Button>
+                  <Button variant="outline" onClick={() => { setBackgroundImage(''); setBackgroundVideo(''); }}>
+                    Clear
+                  </Button>
                 </div>
               </CardContent>
             </Card>

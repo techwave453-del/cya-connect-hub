@@ -75,6 +75,34 @@ export const themes: Theme[] = [
     background: "0 0% 100%",
     foreground: "217 33% 17%"
   }
+  ,
+  {
+    name: "midnight",
+    label: "Midnight",
+    primary: "230 30% 12%",
+    secondary: "230 20% 6%",
+    accent: "200 80% 60%",
+    background: "230 20% 6%",
+    foreground: "220 20% 90%"
+  },
+  {
+    name: "sunrise",
+    label: "Sunrise",
+    primary: "28 85% 56%",
+    secondary: "25 30% 12%",
+    accent: "45 95% 58%",
+    background: "25 40% 8%",
+    foreground: "30 20% 96%"
+  },
+  {
+    name: "mint",
+    label: "Mint Fresh",
+    primary: "150 60% 48%",
+    secondary: "150 20% 92%",
+    accent: "150 60% 48%",
+    background: "150 30% 10%",
+    foreground: "150 20% 96%"
+  }
 ];
 
 interface ThemeContextType {
@@ -164,8 +192,55 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     root.style.setProperty('--background', theme.background);
     root.style.setProperty('--foreground', theme.foreground);
     root.style.setProperty('--ring', theme.primary);
-    
-    // Update card colors based on theme
+
+    // Helpers: parse HSL like "45 100% 50%" -> {h,s,l}
+    const parseHsl = (hsl: string) => {
+      const parts = hsl.split(/\s+/).map(p => p.trim());
+      const h = parseFloat(parts[0]) || 0;
+      const s = parseFloat(parts[1]?.replace('%','')) || 0;
+      const l = parseFloat(parts[2]?.replace('%','')) || 0;
+      return { h, s: s/100, l: l/100 };
+    };
+
+    // Convert HSL (h in degrees, s,l 0..1) to RGB 0..1
+    const hslToRgb = (h:number, s:number, l:number) => {
+      const c = (1 - Math.abs(2*l - 1)) * s;
+      const hh = h / 60;
+      const x = c * (1 - Math.abs(hh % 2 - 1));
+      let r1=0,g1=0,b1=0;
+      if (0 <= hh && hh < 1) { r1=c; g1=x; b1=0; }
+      else if (1 <= hh && hh < 2) { r1=x; g1=c; b1=0; }
+      else if (2 <= hh && hh < 3) { r1=0; g1=c; b1=x; }
+      else if (3 <= hh && hh < 4) { r1=0; g1=x; b1=c; }
+      else if (4 <= hh && hh < 5) { r1=x; g1=0; b1=c; }
+      else { r1=c; g1=0; b1=x; }
+      const m = l - c/2;
+      return { r: r1 + m, g: g1 + m, b: b1 + m };
+    };
+
+    // Relative luminance from RGB 0..1
+    const luminance = (rgb:{r:number,g:number,b:number}) => {
+      const srgb = (v:number) => v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4);
+      const R = srgb(rgb.r);
+      const G = srgb(rgb.g);
+      const B = srgb(rgb.b);
+      return 0.2126*R + 0.7152*G + 0.0722*B;
+    };
+
+    const readableForegroundFor = (hslStr: string) => {
+      try {
+        const {h,s,l} = parseHsl(hslStr);
+        const rgb = hslToRgb(h,s,l);
+        const L = luminance(rgb);
+        // If background is light, use dark text; otherwise use light text
+        if (L > 0.5) return '217 33% 17%'; // dark text (navy-ish)
+        return '0 0% 96%'; // light text (near white)
+      } catch {
+        return theme.foreground;
+      }
+    };
+
+    // Update card/popover/border/input colors based on theme, ensuring readable foregrounds
     if (theme.name === 'light') {
       root.style.setProperty('--card', '0 0% 98%');
       root.style.setProperty('--card-foreground', '217 33% 17%');
@@ -176,14 +251,16 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       root.style.setProperty('--border', '217 20% 85%');
       root.style.setProperty('--input', '217 20% 85%');
     } else {
+      // use secondary as card/background for components and compute readable foregrounds
       root.style.setProperty('--card', theme.secondary);
-      root.style.setProperty('--card-foreground', theme.foreground);
+      root.style.setProperty('--card-foreground', readableForegroundFor(theme.secondary));
       root.style.setProperty('--popover', theme.secondary);
-      root.style.setProperty('--popover-foreground', theme.foreground);
+      root.style.setProperty('--popover-foreground', readableForegroundFor(theme.secondary));
       root.style.setProperty('--muted', theme.secondary);
-      root.style.setProperty('--muted-foreground', `${theme.foreground.split(' ')[0]} 20% 60%`);
-      root.style.setProperty('--border', `${theme.background.split(' ')[0]} 15% 22%`);
-      root.style.setProperty('--input', `${theme.background.split(' ')[0]} 15% 22%`);
+      root.style.setProperty('--muted-foreground', readableForegroundFor(theme.secondary));
+      // border and input use a darker version of background; compute readable foreground for input borders
+      root.style.setProperty('--border', theme.background);
+      root.style.setProperty('--input', theme.background);
     }
   };
 

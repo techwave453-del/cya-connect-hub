@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { Camera, Loader2, User, X } from "lucide-react";
+import { useTheme, themes } from "@/contexts/ThemeContext";
 
 interface EditProfileDialogProps {
   open: boolean;
@@ -36,6 +37,14 @@ const EditProfileDialog = ({
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(currentAvatarUrl);
   const [loading, setLoading] = useState(false);
+  const { setTheme, currentTheme } = useTheme();
+  const [selectedTheme, setSelectedTheme] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('app-theme');
+      if (saved) return JSON.parse(saved).name;
+    } catch {}
+    return currentTheme?.name || '';
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -135,6 +144,16 @@ const EditProfileDialog = ({
 
       onOpenChange(false);
       onProfileUpdated();
+      // Apply and persist selected theme for this user on this device
+      try {
+        const themeObj = themes.find(t => t.name === selectedTheme);
+        if (themeObj) {
+          setTheme(themeObj);
+          localStorage.setItem('app-theme', JSON.stringify(themeObj));
+        }
+      } catch (err) {
+        // ignore
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -148,7 +167,7 @@ const EditProfileDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border text-foreground max-w-md">
+      <DialogContent className="bg-card border-border text-foreground w-full max-w-[420px] sm:max-w-md max-h-[80vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle className="font-heading text-xl">Edit Profile</DialogTitle>
         </DialogHeader>
@@ -157,7 +176,7 @@ const EditProfileDialog = ({
           {/* Avatar Upload */}
           <div className="flex flex-col items-center gap-4">
             <div className="relative">
-              <div className="w-24 h-24 rounded-full bg-secondary flex items-center justify-center overflow-hidden">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-secondary flex items-center justify-center overflow-hidden">
                 {avatarPreview ? (
                   <img
                     src={avatarPreview}
@@ -224,7 +243,29 @@ const EditProfileDialog = ({
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3">
+          {/* Theme Picker */}
+          <div className="space-y-2">
+            <Label className="text-foreground">Theme</Label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {themes.map((theme) => (
+                <button
+                  key={theme.name}
+                  type="button"
+                  onClick={() => setSelectedTheme(theme.name)}
+                  className={`p-3 rounded-lg border-2 transition-all text-left ${
+                    selectedTheme === theme.name ? 'border-primary ring-2 ring-primary/50' : 'border-border'
+                  }`}
+                >
+                  <div className="flex gap-2 mb-2">
+                    <div className="w-5 h-5 rounded-full" style={{ backgroundColor: `hsl(${theme.primary})` }} />
+                    <div className="w-5 h-5 rounded-full" style={{ backgroundColor: `hsl(${theme.background})` }} />
+                  </div>
+                  <div className="text-sm text-foreground font-medium">{theme.label}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3">
             <Button
               type="button"
               variant="outline"
