@@ -7,7 +7,7 @@ import { useBibleGames, BibleGame } from '@/hooks/useBibleGames';
 import GameLobby from './GameLobby';
 import CreateRoomDialog from './CreateRoomDialog';
 import JoinRoomDialog from './JoinRoomDialog';
-import LocalChat from './LocalChat';
+import FloatingChat from './FloatingChat';
 import MultiplayerGame from './MultiplayerGame';
 import { cn } from '@/lib/utils';
 
@@ -242,13 +242,11 @@ const MultiplayerMode = ({ onBack }: MultiplayerModeProps) => {
         />
       </div>
 
-      <div className="w-full md:w-80">
-        <LocalChat
-          messages={messages}
-          localId={localId}
-          onSendMessage={sendChatMessage}
-        />
-      </div>
+      <FloatingChat
+        messages={messages}
+        localId={localId}
+        onSendMessage={sendChatMessage}
+      />
     </div>
   );
 };
