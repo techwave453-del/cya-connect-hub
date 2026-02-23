@@ -8,6 +8,8 @@ import { BibleGame } from '@/hooks/useBibleGames';
 import { GameRoom, LocalPeer, GameMode } from '@/lib/localNetwork';
 import { MultiplayerGameState } from '@/hooks/useLocalMultiplayer';
 import { cn } from '@/lib/utils';
+import ClueDialog from './ClueDialog';
+import { toast } from '@/hooks/use-toast';
 
 interface MultiplayerGameProps {
   room: GameRoom;
@@ -37,6 +39,7 @@ const MultiplayerGame = ({
   const [timer, setTimer] = useState(30);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [hasAnswered, setHasAnswered] = useState(false);
+  const [showClueDialog, setShowClueDialog] = useState(false);
 
   const currentQuestion = gameState.currentQuestion;
   const currentIndex = gameState.currentQuestionIndex;
@@ -378,16 +381,22 @@ const MultiplayerGame = ({
             <div className="pt-2">
               <Button
                 variant="outline"
-                onClick={() => {
-                  const clue = window.prompt('Enter a short clue to help your teammates:');
-                  if (clue && clue.trim()) onSendClue(clue.trim());
-                }}
+                onClick={() => setShowClueDialog(true)}
                 className="w-full"
               >
                 Give Clue
               </Button>
             </div>
           )}
+
+          <ClueDialog
+            open={showClueDialog}
+            onOpenChange={setShowClueDialog}
+            onSend={(text) => {
+              onSendClue?.(text);
+              toast({ title: 'Clue sent', description: text });
+            }}
+          />
         </CardContent>
       </Card>
     </div>
