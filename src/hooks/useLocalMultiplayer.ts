@@ -464,6 +464,7 @@ export const useLocalMultiplayer = () => {
       timer: 30
     };
 
+    // Broadcast game start and a room update so guests switch from lobby -> game view
     connectionManager.current.broadcast({
       type: 'game_start',
       senderId: localId.current,
@@ -471,9 +472,21 @@ export const useLocalMultiplayer = () => {
       payload: { gameState: initialGameState, questions }
     });
 
+    const updatedRoom = state.room ? { ...state.room, status: 'playing' } : null;
+
+    // Inform peers about the room status change as well
+    if (updatedRoom) {
+      connectionManager.current.broadcast({
+        type: 'room_update',
+        senderId: localId.current,
+        senderName: localName.current,
+        payload: { room: updatedRoom }
+      });
+    }
+
     setState(prev => ({
       ...prev,
-      room: prev.room ? { ...prev.room, status: 'playing' } : null,
+      room: updatedRoom,
       gameState: initialGameState,
       sharedQuestions: questions
     }));
