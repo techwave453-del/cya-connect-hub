@@ -27,7 +27,8 @@ const GameLobby = ({
   localId,
   connectionStatus,
   onStartGame,
-  onLeaveRoom
+  onLeaveRoom,
+  onUpdateRoomSettings
 }: GameLobbyProps) => {
   const [questionsCount, setQuestionsCount] = useState<number>(room?.questionsPerRound || 10);
   // Keep local input in sync when room settings change
@@ -161,17 +162,18 @@ const GameLobby = ({
           )}
         </div>
 
-        {/* Actions */}
-        <div className="flex gap-2">
+        {/* Actions - responsive: stack on small screens, inline on larger */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
           <Button
             variant="outline"
             onClick={onLeaveRoom}
-            className="flex-1 gap-2"
+            className="w-full sm:w-40 flex items-center justify-center gap-2"
           >
             <LogOut className="w-4 h-4" />
             Leave
           </Button>
-          <div className="flex gap-2 w-full">
+
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full">
             <div className="flex items-center gap-2">
               <Input
                 type="number"
@@ -191,7 +193,7 @@ const GameLobby = ({
                 }
               }}
               variant="outline"
-              className="gap-2"
+              className="w-full sm:w-auto"
             >
               Save
             </Button>
@@ -199,7 +201,7 @@ const GameLobby = ({
             <Button
               onClick={onStartGame}
               disabled={!canStart}
-              className="flex-1 gap-2"
+              className="w-full sm:flex-1 flex items-center justify-center gap-2"
             >
               <Play className="w-4 h-4" />
               {isHost ? 'Start Game' : 'Request Start'}
