@@ -217,27 +217,23 @@ export const useLocalMultiplayer = () => {
     
     connectionManager.current.onPeerConnected((peer) => {
       setState(prev => {
-        // Mark as host if this is the first peer (they're the room host)
-        const updatedPeer = { ...peer, isHost: prev.peers.length === 0 };
-        
-        // Request room info from the host (which validates passcode)
-        if (updatedPeer.isHost) {
-          setTimeout(() => {
-            connectionManager.current?.sendTo(peer.id, {
-              type: 'request_room_info',
-              senderId: localId.current,
-              senderName: localName.current,
-              payload: { passcode }
-            });
-          }, 100);
-        }
-        
+        // Add peer to local list; don't assume role here. We'll request room info from host separately.
+        const updatedPeer = { ...peer, isHost: false };
         return {
           ...prev,
           peers: [...prev.peers, updatedPeer],
           connectionStatus: 'connected'
         };
       });
+      // Ask the newly connected peer for room info (host will respond if it's the host)
+      setTimeout(() => {
+        connectionManager.current?.sendTo(peer.id, {
+          type: 'request_room_info',
+          senderId: localId.current,
+          senderName: localName.current,
+          payload: { passcode }
+        });
+      }, 50);
     });
 
     connectionManager.current.onPeerDisconnected((peerId) => {
@@ -253,6 +249,17 @@ export const useLocalMultiplayer = () => {
 
     // Announce presence and wait for signaling to be ready
     await connectionManager.current.announce();
+
+    // After announcing, wait briefly for any data channels to open and request room info from each connected peer.
+    setTimeout(() => {
+      // Send request_room_info to any currently-open peers directly; as new peers connect they'll also be asked in onPeerConnected
+      connectionManager.current?.broadcast({
+        type: 'request_room_info',
+        senderId: localId.current,
+        senderName: localName.current,
+        payload: { passcode }
+      });
+    }, 500);
 
     // Wait for connection
     return new Promise<boolean>((resolve) => {
@@ -504,17 +511,9 @@ export const useLocalMultiplayer = () => {
       timer: 30
     };
 
-    // Broadcast game start and a room update so guests switch from lobby -> game view
-    connectionManager.current.broadcast({
-      type: 'game_start',
-      senderId: localId.current,
-      senderName: localName.current,
-      payload: { gameState: initialGameState, questions }
-    });
-
+    // First update room status and inform peers so clients switch view
     const updatedRoom = state.room ? { ...state.room, status: 'playing' } : null;
 
-    // Inform peers about the room status change as well
     if (updatedRoom) {
       connectionManager.current.broadcast({
         type: 'room_update',
@@ -524,12 +523,21 @@ export const useLocalMultiplayer = () => {
       });
     }
 
+    // Update host state
     setState(prev => ({
       ...prev,
       room: updatedRoom,
       gameState: initialGameState,
       sharedQuestions: questions
     }));
+
+    // Then broadcast the game start payload
+    connectionManager.current.broadcast({
+      type: 'game_start',
+      senderId: localId.current,
+      senderName: localName.current,
+      payload: { gameState: initialGameState, questions }
+    });
   }, [state.isHost, state.room]);
 
   // Request start of the game (guests will send a request to host; host will start directly)
