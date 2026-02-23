@@ -361,7 +361,7 @@ const AdminGameManagement = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <Label className="whitespace-nowrap">Questions per type:</Label>
               <Select
                 value={generateCount.toString()}
@@ -385,7 +385,7 @@ const AdminGameManagement = () => {
                 value={generateStory}
                 onValueChange={(value) => {
                   setGenerateStory(value === 'none' ? '' : value);
-                  setGenerateTestament(''); // Clear testament when choosing a story
+                  setGenerateTestament('any'); // Reset testament when choosing a story
                 }}
               >
                 <SelectTrigger>
@@ -429,7 +429,7 @@ const AdminGameManagement = () => {
               onClick={() => handleGenerateQuestions("trivia")}
               disabled={isGenerating}
               variant="outline"
-              className="gap-2 h-auto py-3 flex-col items-start"
+              className="w-full gap-2 h-auto py-3 flex flex-col sm:flex-row items-start text-left"
             >
               <div className="flex items-center gap-2 w-full">
                 {isGenerating ? (
@@ -448,7 +448,7 @@ const AdminGameManagement = () => {
               onClick={() => handleGenerateQuestions("guess_character")}
               disabled={isGenerating}
               variant="outline"
-              className="gap-2 h-auto py-3 flex-col items-start"
+              className="w-full gap-2 h-auto py-3 flex flex-col sm:flex-row items-start text-left"
             >
               <div className="flex items-center gap-2 w-full">
                 {isGenerating ? (
@@ -467,7 +467,7 @@ const AdminGameManagement = () => {
               onClick={() => handleGenerateQuestions("fill_blank")}
               disabled={isGenerating}
               variant="outline"
-              className="gap-2 h-auto py-3 flex-col items-start"
+              className="w-full gap-2 h-auto py-3 flex flex-col sm:flex-row items-start text-left"
             >
               <div className="flex items-center gap-2 w-full">
                 {isGenerating ? (
@@ -486,7 +486,7 @@ const AdminGameManagement = () => {
               onClick={() => handleGenerateQuestions("memory_verse")}
               disabled={isGenerating}
               variant="outline"
-              className="gap-2 h-auto py-3 flex-col items-start"
+              className="w-full gap-2 h-auto py-3 flex flex-col sm:flex-row items-start text-left"
             >
               <div className="flex items-center gap-2 w-full">
                 {isGenerating ? (
