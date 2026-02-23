@@ -211,6 +211,20 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, []);
 
+  // Listen for immediate background updates from admin UI
+  useEffect(() => {
+    const handler = (e: any) => {
+      try {
+        const payload = e.detail as { imageUrl?: string | null; videoUrl?: string | null };
+        applyBackground(payload);
+      } catch (err) {
+        console.error('Error applying background from event:', err);
+      }
+    };
+    window.addEventListener('app-background-updated', handler as EventListener);
+    return () => window.removeEventListener('app-background-updated', handler as EventListener);
+  }, []);
+
   const applyTheme = (theme: Theme) => {
     const root = document.documentElement;
     root.style.setProperty('--primary', theme.primary);

@@ -165,6 +165,10 @@ const AdminPage = () => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } else {
       toast({ title: 'Background updated' });
+      try {
+        const evt = new CustomEvent('app-background-updated', { detail: payload });
+        window.dispatchEvent(evt);
+      } catch {}
     }
     setLoadingAction(false);
   };
