@@ -152,6 +152,7 @@ const AdminPage = () => {
 
   const [backgroundImage, setBackgroundImage] = useState("");
   const [backgroundVideo, setBackgroundVideo] = useState("");
+  const [previewVideoError, setPreviewVideoError] = useState<string | null>(null);
 
   const handleSaveBackground = async () => {
     setLoadingAction(true);
@@ -1007,7 +1008,22 @@ const AdminPage = () => {
                   <Label>Preview</Label>
                   <div className="rounded-lg overflow-hidden bg-secondary/20 p-2">
                     {backgroundVideo ? (
-                      <video src={backgroundVideo} controls className="w-full max-h-60 object-cover" />
+                      <>
+                        <video
+                          src={backgroundVideo}
+                          controls
+                          playsInline
+                          muted
+                          loop
+                          preload="metadata"
+                          className="w-full max-h-60 object-cover"
+                          onError={() => setPreviewVideoError('Unable to load video. Check URL, format (mp4/webm), or CORS.')}
+                          onLoadedData={() => setPreviewVideoError(null)}
+                        />
+                        {previewVideoError && (
+                          <p className="text-xs text-destructive mt-2">{previewVideoError}</p>
+                        )}
+                      </>
                     ) : backgroundImage ? (
                       // eslint-disable-next-line jsx-a11y/media-has-caption
                       <img src={backgroundImage} alt="Background preview" className="w-full max-h-60 object-cover" />
