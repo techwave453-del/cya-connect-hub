@@ -8,6 +8,7 @@ import GameLobby from './GameLobby';
 import CreateRoomDialog from './CreateRoomDialog';
 import JoinRoomDialog from './JoinRoomDialog';
 import FloatingChat from './FloatingChat';
+import LocalChat from './LocalChat';
 import MultiplayerGame from './MultiplayerGame';
 import { cn } from '@/lib/utils';
 
