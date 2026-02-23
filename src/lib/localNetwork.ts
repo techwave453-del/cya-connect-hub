@@ -110,7 +110,11 @@ export class RealtimeSignaling {
 
   private teardownChannel() {
     if (this.channel) {
-      supabase.removeChannel(this.channel);
+      try {
+        supabase.removeChannel(this.channel);
+      } catch (err) {
+        console.warn('Failed to remove signaling channel safely:', err);
+      }
       this.channel = null;
     }
   }
@@ -121,45 +125,60 @@ export class RealtimeSignaling {
     // (Re)create subscribe promise each time we set up a channel.
     this.resetSubscriptionState();
 
-    this.channel = supabase.channel(`game-room-${this.roomId}`, {
-      config: {
-        broadcast: { self: false }
-      }
-    });
-
-    this.channel
-      .on('broadcast', { event: 'signaling' }, ({ payload }) => {
-        const { type, data, from } = payload;
-        // Ignore messages from self
-        if (from === this.localId) return;
-        
-        const handler = this.handlers.get(type);
-        if (handler) {
-          handler({ ...data, from });
-        }
-      })
-      .subscribe((status) => {
-        console.log('Signaling channel status:', status, 'for room:', this.roomId);
-
-        if (status === 'SUBSCRIBED') {
-          this.retryCount = 0;
-          this.isSubscribed = true;
-          console.log('✓ Successfully subscribed to signaling channel for room:', this.roomId);
-          this.resolveSubscribe();
-          // Send any pending messages
-          this.pendingMessages.forEach((msg) => {
-            this.send(msg.type, msg.data, msg.from);
-          });
-          this.pendingMessages = [];
-          return;
-        }
-
-        // If realtime fails to subscribe, try recreating the channel.
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          console.warn('Signaling channel error, will retry:', status);
-          this.retrySubscribe();
+    try {
+      this.channel = supabase.channel(`game-room-${this.roomId}`, {
+        config: {
+          broadcast: { self: false }
         }
       });
+
+      this.channel
+        .on('broadcast', { event: 'signaling' }, ({ payload }) => {
+          try {
+            const { type, data, from } = payload;
+            // Ignore messages from self
+            if (from === this.localId) return;
+            
+            const handler = this.handlers.get(type);
+            if (handler) {
+              handler({ ...data, from });
+            }
+          } catch (e) {
+            console.error('Error handling signaling payload:', e);
+          }
+        })
+        .subscribe((status) => {
+          try {
+            console.log('Signaling channel status:', status, 'for room:', this.roomId);
+
+            if (status === 'SUBSCRIBED') {
+              this.retryCount = 0;
+              this.isSubscribed = true;
+              console.log('✓ Successfully subscribed to signaling channel for room:', this.roomId);
+              this.resolveSubscribe();
+              // Send any pending messages
+              this.pendingMessages.forEach((msg) => {
+                this.send(msg.type, msg.data, msg.from);
+              });
+              this.pendingMessages = [];
+              return;
+            }
+
+            // If realtime fails to subscribe, try recreating the channel.
+            if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+              console.warn('Signaling channel error, will retry:', status);
+              this.retrySubscribe();
+            }
+          } catch (e) {
+            console.error('Error in subscribe handler:', e);
+            this.retrySubscribe();
+          }
+        });
+    } catch (err) {
+      console.error('Failed to setup signaling channel:', err);
+      // Schedule a retry
+      this.retrySubscribe();
+    }
 
     // Safety timeout: some environments never emit TIMED_OUT.
     // Increase timeout to allow slower networks to subscribe
