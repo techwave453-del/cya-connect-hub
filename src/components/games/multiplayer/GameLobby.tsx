@@ -163,25 +163,25 @@ const GameLobby = ({
         </div>
 
         {/* Actions - responsive: stack on small screens, inline on larger */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+        <div className="flex flex-col gap-2">
           <Button
             variant="outline"
             onClick={onLeaveRoom}
-            className="w-full sm:w-40 flex items-center justify-center gap-2"
+            className="w-full py-3 flex items-center justify-center gap-2"
           >
             <LogOut className="w-4 h-4" />
             Leave
           </Button>
 
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <Input
                 type="number"
                 min={1}
                 max={50}
                 value={questionsCount}
                 onChange={(e) => setQuestionsCount(Number(e.target.value))}
-                className="w-24"
+                className="w-full sm:w-24"
               />
               <span className="text-sm text-muted-foreground">Questions</span>
             </div>
@@ -193,7 +193,7 @@ const GameLobby = ({
                 }
               }}
               variant="outline"
-              className="w-full sm:w-auto"
+              className="w-full py-3 sm:w-auto"
             >
               Save
             </Button>
@@ -201,7 +201,7 @@ const GameLobby = ({
             <Button
               onClick={onStartGame}
               disabled={!canStart}
-              className="w-full sm:flex-1 flex items-center justify-center gap-2"
+              className="w-full py-3 sm:flex-1 flex items-center justify-center gap-2"
             >
               <Play className="w-4 h-4" />
               {isHost ? 'Start Game' : 'Request Start'}
