@@ -3,7 +3,7 @@ import {
   Trophy, ChevronUp, ChevronDown, Crown, Medal, Award, WifiOff, User, 
   Flame, Target, Gamepad2, TrendingUp, Sparkles
 } from "lucide-react";
-import { useLeaderboard } from "@/hooks/useBibleGames";
+import { useLeaderboard, AggregatedScore } from "@/hooks/useBibleGames";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
@@ -13,15 +13,21 @@ import { useAuth } from "@/hooks/useAuth";
 interface FloatingLeaderboardProps {
   gameType?: string;
   className?: string;
+  sessionScores?: AggregatedScore[];
 }
 
-const FloatingLeaderboard = ({ gameType: initialGameType, className }: FloatingLeaderboardProps) => {
+const FloatingLeaderboard = ({ gameType: initialGameType, className, sessionScores }: FloatingLeaderboardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
   const { user } = useAuth();
   
   const filterType = selectedFilter === "all" ? undefined : selectedFilter;
-  const { scores, loading, isOnline } = useLeaderboard(filterType);
+  const fetched = useLeaderboard(filterType);
+
+  // If a sessionScores prop is provided (local multiplayer), show those instead
+  const scores = sessionScores ?? fetched.scores;
+  const loading = sessionScores ? false : fetched.loading;
+  const isOnline = sessionScores ? true : fetched.isOnline;
 
   // Find current user's rank
   const userRank = scores.findIndex(s => s.user_id === user?.id) + 1;

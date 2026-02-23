@@ -10,6 +10,7 @@ import JoinRoomDialog from './JoinRoomDialog';
 import FloatingChat from './FloatingChat';
 import LocalChat from './LocalChat';
 import MultiplayerGame from './MultiplayerGame';
+import FloatingLeaderboard from '@/components/games/FloatingLeaderboard';
 import { cn } from '@/lib/utils';
 
 interface MultiplayerModeProps {
@@ -43,6 +44,32 @@ const MultiplayerMode = ({ onBack }: MultiplayerModeProps) => {
     isBluetoothSupported,
     sharedQuestions
   } = useLocalMultiplayer();
+
+  // Build session leaderboard from room or current game state
+  const sessionScores = (() => {
+    if (!room) return [];
+
+    if (gameState?.scores) {
+      return Object.entries(gameState.scores).map(([id, total_score]) => {
+        const player = room.currentPlayers.find(p => p.id === id);
+        return {
+          user_id: id,
+          total_score: total_score as number,
+          total_games_played: 0,
+          highest_streak: 0,
+          profiles: { username: player?.name, avatar_url: undefined }
+        };
+      }).sort((a, b) => b.total_score - a.total_score);
+    }
+
+    return room.currentPlayers.map(p => ({
+      user_id: p.id,
+      total_score: p.score || 0,
+      total_games_played: 0,
+      highest_streak: 0,
+      profiles: { username: p.name, avatar_url: undefined }
+    })).sort((a, b) => b.total_score - a.total_score);
+  })();
 
   const { games: triviaGames } = useBibleGames('trivia');
   const { games: characterGames } = useBibleGames('guess_character');
@@ -221,6 +248,7 @@ const MultiplayerMode = ({ onBack }: MultiplayerModeProps) => {
           localId={localId}
           onSendMessage={sendChatMessage}
         />
+        <FloatingLeaderboard sessionScores={sessionScores} className="right-20 bottom-20" />
       </div>
     );
   }
@@ -248,6 +276,7 @@ const MultiplayerMode = ({ onBack }: MultiplayerModeProps) => {
         localId={localId}
         onSendMessage={sendChatMessage}
       />
+      <FloatingLeaderboard sessionScores={sessionScores} className="right-20 bottom-20" />
     </div>
   );
 };
