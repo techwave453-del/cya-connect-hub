@@ -817,6 +817,7 @@ const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: Bibl
                               prose-h1:text-lg prose-h1:mt-6 prose-h1:mb-3 prose-h1:pb-2 prose-h1:border-b-2 prose-h1:border-primary/30 prose-h1:bg-gradient-to-r prose-h1:from-primary/10 prose-h1:to-transparent prose-h1:px-3 prose-h1:py-2 prose-h1:rounded-lg
                               prose-h2:text-base prose-h2:mt-5 prose-h2:mb-3 prose-h2:text-primary prose-h2:bg-primary/5 prose-h2:px-3 prose-h2:py-1 prose-h2:rounded-md
                               prose-h3:text-sm prose-h3:mt-4 prose-h3:mb-2 prose-h3:text-primary/90 prose-h3:font-semibold
+                              prose-img:my-4 prose-img:rounded-lg prose-img:shadow-md prose-img:max-w-full prose-img:h-auto prose-img:object-contain prose-img:border prose-img:border-primary/20
                               prose-ul:my-3 prose-ul:pl-5 prose-ul:space-y-2 prose-ul:marker:text-primary prose-ul:marker:font-bold
                               prose-ol:my-3 prose-ol:pl-5 prose-ol:space-y-2 prose-ol:marker:text-primary prose-ol:marker:font-semibold
                               prose-li:my-1 prose-li:leading-relaxed prose-li:text-foreground prose-li:break-words
