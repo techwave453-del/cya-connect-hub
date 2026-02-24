@@ -147,26 +147,39 @@ const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: Bibl
     return storyKeywords.some(kw => lowerContent.includes(kw));
   };
 
-  // Find which story is being discussed in the conversation
-  const findStoryInConversation = (): { title: string; image: string; refs: string[] } | null => {
-    const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
-    if (!lastUserMsg) return null;
-
-    const msgLower = lastUserMsg.content.toLowerCase();
-    const matchedStory = BIBLE_STORIES.find(story => 
-      story.title.toLowerCase().split(' ').some(word => msgLower.includes(word)) ||
+  // Find which story is being discussed - search by message content
+  const findStoryFromMessage = (messageContent: string): { title: string; image: string; refs: string[] } | null => {
+    if (!messageContent || !BIBLE_STORIES) return null;
+    
+    const msgLower = messageContent.toLowerCase();
+    // First try exact title match
+    const exactMatch = BIBLE_STORIES.find(story => 
       msgLower.includes(story.title.toLowerCase())
     );
+    if (exactMatch) return exactMatch;
     
-    return matchedStory || null;
+    // Then try word-by-word match
+    const wordMatch = BIBLE_STORIES.find(story => 
+      story.title.toLowerCase().split(' ').some(word => 
+        word.length > 3 && msgLower.includes(word)
+      )
+    );
+    return wordMatch || null;
   };
 
-  const handleGetFullStory = () => {
-    const story = findStoryInConversation();
-    const imageMarkdown = story && story.image ? `\n\n![${story.title}](${story.image})` : '';
-    const imageCaption = story && story.image ? `\n\n_Image: ${story.title}_` : '';
+  const handleGetFullStory = (userMessageContent?: string) => {
+    const messageToSearch = userMessageContent || (messages.length > 0 ? messages[messages.length - 1]?.content : '');
+    const story = findStoryFromMessage(messageToSearch || '');
     
-    const fullStoryPrompt = `Please tell me the complete, detailed story of ${story?.title || 'this biblical account'}. Narrate it like you're explaining it to a friend — include all the events, characters, dialogue, emotional moments, and spiritual significance. Make it engaging and personal, like a good storyteller would.${imageMarkdown}${imageCaption}`;
+    if (!story) {
+      toast({ title: 'Could not identify the story. Please be more specific.', variant: 'destructive' });
+      return;
+    }
+    
+    const imageMarkdown = story.image ? `\n\n![${story.title}](${story.image})` : '';
+    const imageCaption = story.image ? `\n\n_Image: ${story.title}_` : '';
+    
+    const fullStoryPrompt = `Please tell me the complete, detailed story of ${story.title}. Narrate it like you're explaining it to a friend — include all the events, characters, dialogue, emotional moments, and spiritual significance. Make it engaging and personal, like a good storyteller would.${imageMarkdown}${imageCaption}`;
     sendMessage(fullStoryPrompt);
   };
 
@@ -845,12 +858,12 @@ const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: Bibl
                         
                         {msg.role === 'assistant' && msg.content && (
                           <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity flex-wrap">
-                            {messages.length > 0 && messages[messages.length - 2]?.role === 'user' && detectStoryQuestion(messages[messages.length - 2]?.content || '') && (
+                            {index > 0 && messages[index - 1]?.role === 'user' && detectStoryQuestion(messages[index - 1]?.content || '') && (
                               <Button
                                 variant="default"
                                 size="sm"
                                 className="h-7 px-2.5 text-xs bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg"
-                                onClick={handleGetFullStory}
+                                onClick={() => handleGetFullStory(messages[index - 1]?.content)}
                               >
                                 📖 Get Full Story
                               </Button>
