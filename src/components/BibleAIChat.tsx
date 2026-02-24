@@ -147,8 +147,26 @@ const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: Bibl
     return storyKeywords.some(kw => lowerContent.includes(kw));
   };
 
+  // Find which story is being discussed in the conversation
+  const findStoryInConversation = (): { title: string; image: string; refs: string[] } | null => {
+    const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
+    if (!lastUserMsg) return null;
+
+    const msgLower = lastUserMsg.content.toLowerCase();
+    const matchedStory = BIBLE_STORIES.find(story => 
+      story.title.toLowerCase().split(' ').some(word => msgLower.includes(word)) ||
+      msgLower.includes(story.title.toLowerCase())
+    );
+    
+    return matchedStory || null;
+  };
+
   const handleGetFullStory = () => {
-    const fullStoryPrompt = `Please tell me the complete, detailed story. Narrate it like you're explaining it to a friend — include all the events, characters, dialogue, emotional moments, and spiritual significance. Make it engaging and personal, like a good storyteller would.`;
+    const story = findStoryInConversation();
+    const imageMarkdown = story && story.image ? `\n\n![${story.title}](${story.image})` : '';
+    const imageCaption = story && story.image ? `\n\n_Image: ${story.title}_` : '';
+    
+    const fullStoryPrompt = `Please tell me the complete, detailed story of ${story?.title || 'this biblical account'}. Narrate it like you're explaining it to a friend — include all the events, characters, dialogue, emotional moments, and spiritual significance. Make it engaging and personal, like a good storyteller would.${imageMarkdown}${imageCaption}`;
     sendMessage(fullStoryPrompt);
   };
 
