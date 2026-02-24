@@ -9,26 +9,31 @@
    const [isLoading, setIsLoading] = useState(false);
    const [error, setError] = useState<string | null>(null);
  
-   const sendMessage = useCallback(async (input: string) => {
-     if (!input.trim() || isLoading) return;
- 
-     const userMsg: Message = { role: 'user', content: input };
-     setMessages(prev => [...prev, userMsg]);
-     setIsLoading(true);
-     setError(null);
- 
-     let assistantSoFar = '';
- 
-     const upsertAssistant = (nextChunk: string) => {
-       assistantSoFar += nextChunk;
-       setMessages(prev => {
-         const last = prev[prev.length - 1];
-         if (last?.role === 'assistant') {
-           return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantSoFar } : m));
-         }
-         return [...prev, { role: 'assistant', content: assistantSoFar }];
-       });
-     };
+  const sendMessage = useCallback(async (input: string, options?: { suppressUser?: boolean }) => {
+    if (!input.trim() || isLoading) return;
+
+    const suppressUser = !!options?.suppressUser;
+    const userMsg: Message = { role: 'user', content: input };
+    let addedUser = false;
+    if (!suppressUser) {
+      setMessages(prev => [...prev, userMsg]);
+      addedUser = true;
+    }
+    setIsLoading(true);
+    setError(null);
+
+    let assistantSoFar = '';
+
+    const upsertAssistant = (nextChunk: string) => {
+      assistantSoFar += nextChunk;
+      setMessages(prev => {
+        const last = prev[prev.length - 1];
+        if (last?.role === 'assistant') {
+          return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantSoFar } : m));
+        }
+        return [...prev, { role: 'assistant', content: assistantSoFar }];
+      });
+    };
  
      try {
        const allMessages = [...messages, userMsg];
@@ -104,14 +109,16 @@
            } catch { /* ignore */ }
          }
        }
-     } catch (e) {
-       console.error('Bible chat error:', e);
-       setError(e instanceof Error ? e.message : 'Failed to get response');
-       // Remove the user message on error
-       setMessages(prev => prev.filter(m => m !== userMsg));
-     } finally {
-       setIsLoading(false);
-     }
+    } catch (e) {
+      console.error('Bible chat error:', e);
+      setError(e instanceof Error ? e.message : 'Failed to get response');
+      // Remove the user message on error if we added it locally
+      if (addedUser) {
+        setMessages(prev => prev.filter(m => m !== userMsg));
+      }
+    } finally {
+      setIsLoading(false);
+    }
    }, [messages, isLoading]);
 
   const generateInsight = useCallback(async (prompt: string): Promise<string | null> => {

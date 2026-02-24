@@ -180,7 +180,7 @@ const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: Bibl
     const imageCaption = story.image ? `\n\n_Image: ${story.title}_` : '';
     
     const fullStoryPrompt = `Please tell me the complete, detailed story of ${story.title}. Narrate it like you're explaining it to a friend — include all the events, characters, dialogue, emotional moments, and spiritual significance. Make it engaging and personal, like a good storyteller would.${imageMarkdown}${imageCaption}`;
-    sendMessage(fullStoryPrompt);
+    sendMessage(fullStoryPrompt, { suppressUser: true });
   };
 
   const handleSaveChat = async () => {
@@ -720,7 +720,7 @@ const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: Bibl
                               if (!story) return;
                               setReadMoreClicked(true);
                               const readMorePrompt = `Please recreate the biblical story "${story.title}" using scripture quotes and references where appropriate. Present a faithful retelling that cites specific verses (${story.refs.join(', ')}).`;
-                              sendMessage(readMorePrompt);
+                              sendMessage(readMorePrompt, { suppressUser: true });
                             }} className="flex-1 sm:flex-none">Read More</Button>
                           </div>
                         </div>
