@@ -1,6 +1,8 @@
 // IndexedDB wrapper for offline data storage
 const DB_NAME = 'cya-offline-db';
 const DB_VERSION = 2;
+const MAX_SYNC_QUEUE_AGE = 30 * 24 * 60 * 60 * 1000; // 30 days
+const MAX_STORE_SIZE = 50 * 1024 * 1024; // 50 MB
 
 interface SyncQueueItem {
   id: string;
@@ -8,6 +10,7 @@ interface SyncQueueItem {
   action: 'insert' | 'update' | 'delete';
   data: object;
   timestamp: number;
+  retryCount?: number;
 }
 
 let db: IDBDatabase | null = null;
@@ -221,4 +224,82 @@ export const getAuthSession = async (): Promise<{ id: string; user: unknown; acc
 
 export const clearAuthSession = async (): Promise<void> => {
   await clearStore('auth_session');
+};
+
+// Pruning and maintenance operations
+export const pruneSyncQueue = async (): Promise<{ removed: number }> => {
+  const database = await openDB();
+  const now = Date.now();
+  let removed = 0;
+
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction('sync_queue', 'readwrite');
+    const store = transaction.objectStore('sync_queue');
+    const index = store.index('timestamp');
+
+    // Query items older than MAX_SYNC_QUEUE_AGE
+    const range = IDBKeyRange.upperBound(now - MAX_SYNC_QUEUE_AGE);
+    const request = index.openCursor(range);
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (cursor) {
+        cursor.delete();
+        removed++;
+        cursor.continue();
+      }
+    };
+
+    transaction.oncomplete = () => resolve({ removed });
+    transaction.onerror = () => reject(transaction.error);
+  });
+};
+
+export const pruneOldData = async (storeName: string, maxAge: number = 60 * 24 * 60 * 60 * 1000): Promise<{ removed: number }> => {
+  const database = await openDB();
+  const allItems = await getAll<{ id: string; created_at?: number; updated_at?: number; timestamp?: number }>(storeName);
+  const now = Date.now();
+  let removed = 0;
+
+  for (const item of allItems) {
+    const itemTime = item.updated_at || item.created_at || item.timestamp || 0;
+    if (now - itemTime > maxAge) {
+      await remove(storeName, item.id);
+      removed++;
+    }
+  }
+
+  return { removed };
+};
+
+export const getDBSize = async (): Promise<{ used: number; available: number; percentage: number }> => {
+  if (!navigator.storage || !navigator.storage.estimate) {
+    return { used: 0, available: MAX_STORE_SIZE, percentage: 0 };
+  }
+
+  try {
+    const estimate = await navigator.storage.estimate();
+    const used = estimate.usage || 0;
+    const available = estimate.quota || MAX_STORE_SIZE;
+    const percentage = (used / available) * 100;
+    return { used, available, percentage };
+  } catch {
+    return { used: 0, available: MAX_STORE_SIZE, percentage: 0 };
+  }
+};
+
+export const requestPersistentStorage = async (): Promise<boolean> => {
+  if (!navigator.storage || !navigator.storage.persist) {
+    return false;
+  }
+
+  try {
+    const isPersistent = await navigator.storage.persist();
+    console.log('[offlineDb] Persistent storage granted:', isPersistent);
+    return isPersistent;
+  } catch (error) {
+    console.error('[offlineDb] Error requesting persistent storage:', error);
+    return false;
+  }
 };
