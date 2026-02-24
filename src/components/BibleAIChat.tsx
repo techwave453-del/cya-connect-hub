@@ -410,7 +410,7 @@ const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: Bibl
     const story = BIBLE_STORIES[storyOrder[currentStoryIdx]];
     if (!story) return;
     setLoadingInsight(true);
-    const prompt = `Provide a concise (2-3 sentence) insight about the biblical story "${story.title}" and list 1-2 key scripture references.`;
+    const prompt = `Please recreate the biblical story "${story.title}" using scripture quotes and references where appropriate. Present a faithful retelling that cites specific verses (${story.refs.join(', ')}).`;
     const result = await generateInsight(prompt);
     setCurrentInsight(result);
     setLoadingInsight(false);
