@@ -140,6 +140,18 @@ const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: Bibl
     setTimeout(() => setCopiedIndex(null), 2000);
   }, []);
 
+  // Detect if a message is about a biblical story and offer full story
+  const detectStoryQuestion = (content: string): boolean => {
+    const storyKeywords = ['story', 'tell me', 'what happened', 'explain', 'describe', 'narrative', 'account'];
+    const lowerContent = content.toLowerCase();
+    return storyKeywords.some(kw => lowerContent.includes(kw));
+  };
+
+  const handleGetFullStory = () => {
+    const fullStoryPrompt = `Please tell me the complete, detailed story. Narrate it like you're explaining it to a friend — include all the events, characters, dialogue, emotional moments, and spiritual significance. Make it engaging and personal, like a good storyteller would.`;
+    sendMessage(fullStoryPrompt);
+  };
+
   const handleSaveChat = async () => {
     if (!saveTitle.trim()) {
       toast({ title: "Please enter a title", variant: "destructive" });
@@ -813,7 +825,17 @@ const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: Bibl
                         </div>
                         
                         {msg.role === 'assistant' && msg.content && (
-                          <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity flex-wrap">
+                            {messages.length > 0 && messages[messages.length - 2]?.role === 'user' && detectStoryQuestion(messages[messages.length - 2]?.content || '') && (
+                              <Button
+                                variant="default"
+                                size="sm"
+                                className="h-7 px-2.5 text-xs bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg"
+                                onClick={handleGetFullStory}
+                              >
+                                📖 Get Full Story
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
