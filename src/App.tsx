@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createBrowserRouter, RouterProvider, createRoutesFromElements, Route } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { OfflineProvider } from "@/contexts/OfflineContext";
+import { SyncStatusProvider } from "@/contexts/SyncStatusContext";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ProfilePage from "./pages/ProfilePage";
@@ -23,40 +24,42 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
       <OfflineProvider>
-        <TooltipProvider>
-          <DynamicPwaHead />
-          <PwaUpdateHandler />
-          <Toaster />
-          <Sonner />
-          <OfflineIndicator />
-          {
-            // Create router with future flags to opt-in to v7 behaviors
-            (() => {
-              const routes = createRoutesFromElements(
-                <>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/profile/:userId" element={<ProfilePage />} />
-                  <Route path="/chat" element={<ChatPage />} />
-                  <Route path="/admin" element={<AdminPage />} />
-                  <Route path="/games" element={<GamesPage />} />
-                  <Route path="/install" element={<Install />} />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  <Route path="*" element={<NotFound />} />
-                </>
-              );
+        <SyncStatusProvider>
+          <TooltipProvider>
+            <DynamicPwaHead />
+            <PwaUpdateHandler />
+            <Toaster />
+            <Sonner />
+            <OfflineIndicator />
+            {
+              // Create router with future flags to opt-in to v7 behaviors
+              (() => {
+                const routes = createRoutesFromElements(
+                  <>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/auth" element={<Auth />} />
+                    <Route path="/profile/:userId" element={<ProfilePage />} />
+                    <Route path="/chat" element={<ChatPage />} />
+                    <Route path="/admin" element={<AdminPage />} />
+                    <Route path="/games" element={<GamesPage />} />
+                    <Route path="/install" element={<Install />} />
+                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                    <Route path="*" element={<NotFound />} />
+                  </>
+                );
 
-              const router = createBrowserRouter(routes, {
-                future: {
-                  v7_startTransition: true,
-                  v7_relativeSplatPath: true,
-                },
-              });
+                const router = createBrowserRouter(routes, {
+                  future: {
+                    v7_startTransition: true,
+                    v7_relativeSplatPath: true,
+                  },
+                });
 
-              return <RouterProvider router={router} />;
-            })()
-          }
-        </TooltipProvider>
+                return <RouterProvider router={router} />;
+              })()
+            }
+          </TooltipProvider>
+        </SyncStatusProvider>
       </OfflineProvider>
     </ThemeProvider>
   </QueryClientProvider>
