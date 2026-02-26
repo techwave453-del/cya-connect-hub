@@ -449,7 +449,7 @@ const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: Bibl
     }, AUTO_DELAY);
 
     return () => window.clearTimeout(id);
-  }, [currentStoryIdx, storyOrder, readMoreClicked]);
+  }, [currentStoryIdx, storyOrder, readMoreClicked, loadingInsight, showInsight]);
 
   // Persist story order and index
   useEffect(() => {
