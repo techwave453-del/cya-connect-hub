@@ -438,7 +438,11 @@ const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: Bibl
   // Auto-shuffle if user does not click Read More within a short delay
   useEffect(() => {
     const AUTO_DELAY = 30000; // 30 seconds
+    // Pause auto-shuffle when user has clicked Read More
+    // or when an insight is being loaded or displayed
     if (readMoreClicked) return;
+    if (loadingInsight) return;
+    if (showInsight) return;
 
     const id = window.setTimeout(() => {
       shuffleStories();
