@@ -9,6 +9,7 @@ import FloatingActionButton from "@/components/FloatingActionButton";
  import BibleAIButton from "@/components/BibleAIButton";
 import CreatePostDialog from "@/components/CreatePostDialog";
 import DailyBibleVerse from "@/components/DailyBibleVerse";
+import DailyBibleStory from "@/components/DailyBibleStory";
 import { useAuth } from "@/hooks/useAuth";
 import { usePosts } from "@/hooks/usePosts";
 import { useTasks } from "@/hooks/useTasks";
@@ -115,6 +116,7 @@ const Index = () => {
           <>
             <div className="px-4 pt-4">
               <DailyBibleVerse />
+              <DailyBibleStory />
             </div>
             <IdeasSection onShareIdea={handleShareIdea} />
             

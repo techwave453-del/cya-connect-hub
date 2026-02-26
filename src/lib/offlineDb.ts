@@ -53,6 +53,11 @@ const openDB = (): Promise<IDBDatabase> => {
         database.createObjectStore('bible_verses', { keyPath: 'id' });
       }
 
+      // Store for daily_story
+      if (!database.objectStoreNames.contains('daily_story')) {
+        database.createObjectStore('daily_story', { keyPath: 'id' });
+      }
+
       // Store for profiles
       if (!database.objectStoreNames.contains('profiles')) {
         database.createObjectStore('profiles', { keyPath: 'id' });
