@@ -16,15 +16,21 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import BiblePassageDialog from '@/components/BiblePassageDialog';
 
 // Helper function to enrich markdown with icons and visual formatting
-const enrichContentWithIcons = (content: string): string => {
+  const enrichContentWithIcons = (content: string): string => {
   let enriched = content;
   
   // Add icons to common scripture reference patterns
+  // Replace scripture refs with a clickable markdown link that uses a bible:// scheme
   enriched = enriched.replace(
     /\b(Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalms?|Proverbs|Ecclesiastes|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|Corinthians|Galatians|Ephesians|Philippians|Colossians|Thessalonians|Timothy|Titus|Philemon|Hebrews|James|Peter|John|Jude|Revelation)\s+(\d+):(\d+)/gi,
-    '📖 $1 $2:$3'
+    (m, book, chap, verse) => {
+      const label = `📖 ${book} ${chap}:${verse}`;
+      const href = `bible://${encodeURIComponent(`${book} ${chap}:${verse}`)}`;
+      return `[${label}](${href})`;
+    }
   );
 
   // Add icons to key concepts and patterns
@@ -47,6 +53,15 @@ const enrichContentWithIcons = (content: string): string => {
 
   return enriched;
 };
+
+  // Bible passage dialog state
+  const [passageRef, setPassageRef] = useState<string | null>(null);
+  const [passageOpen, setPassageOpen] = useState(false);
+
+  const openBibleRef = (ref: string) => {
+    setPassageRef(ref);
+    setPassageOpen(true);
+  };
 
 // Helper function to generate story-specific sample questions
 const generateStoryQuestions = (storyTitle: string, refs: string[]): string[] => {
@@ -756,7 +771,31 @@ const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: Bibl
                                   prose-strong:text-primary prose-strong:font-semibold
                                   prose-em:text-primary/80 prose-em:not-italic prose-em:font-semibold
                                   prose-a:text-primary prose-a:font-semibold prose-a:underline prose-a:break-words">
-                                  <ReactMarkdown>{enrichContentWithIcons(currentInsight)}</ReactMarkdown>
+                                  <ReactMarkdown
+                                    components={{
+                                      a: ({ href, children, ...props }) => {
+                                        const h = String(href || '');
+                                        if (h.startsWith('bible://')) {
+                                          const ref = decodeURIComponent(h.replace('bible://', ''));
+                                          return (
+                                            <a
+                                              href="#"
+                                              onClick={(e) => {
+                                                e.preventDefault();
+                                                openBibleRef(ref);
+                                              }}
+                                              {...props}
+                                            >
+                                              {children}
+                                            </a>
+                                          );
+                                        }
+                                        return <a href={href} {...props}>{children}</a>;
+                                      },
+                                    }}
+                                  >
+                                    {enrichContentWithIcons(currentInsight)}
+                                  </ReactMarkdown>
                                 </div>
                               </div>
                             ) : (
@@ -855,7 +894,31 @@ const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: Bibl
                               prose-table:my-4 prose-table:border-collapse prose-table:w-full prose-table:table-auto
                               prose-th:bg-primary/15 prose-th:text-foreground prose-th:font-bold prose-th:border prose-th:border-primary/20 prose-th:px-3 prose-th:py-2 prose-th:break-words
                               prose-td:border prose-td:border-primary/10 prose-td:px-3 prose-td:py-2 prose-td:text-foreground prose-td:break-words">
-                              <ReactMarkdown>{enrichContentWithIcons(msg.content)}</ReactMarkdown>
+                              <ReactMarkdown
+                                components={{
+                                  a: ({ href, children, ...props }) => {
+                                    const h = String(href || '');
+                                    if (h.startsWith('bible://')) {
+                                      const ref = decodeURIComponent(h.replace('bible://', ''));
+                                      return (
+                                        <a
+                                          href="#"
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            openBibleRef(ref);
+                                          }}
+                                          {...props}
+                                        >
+                                          {children}
+                                        </a>
+                                      );
+                                    }
+                                    return <a href={href} {...props}>{children}</a>;
+                                  },
+                                }}
+                              >
+                                {enrichContentWithIcons(msg.content)}
+                              </ReactMarkdown>
                             </div>
                           ) : (
                             <div className="whitespace-pre-wrap">{msg.content}</div>
@@ -1007,13 +1070,39 @@ const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: Bibl
               </div>
               <div className="p-4 overflow-y-auto max-h-[72vh] prose prose-sm dark:prose-invert max-w-none">
                 {modalMessageContent && (
-                  <ReactMarkdown>{enrichContentWithIcons(modalMessageContent)}</ReactMarkdown>
+                  <ReactMarkdown
+                    components={{
+                      a: ({ href, children, ...props }) => {
+                        const h = String(href || '');
+                        if (h.startsWith('bible://')) {
+                          const ref = decodeURIComponent(h.replace('bible://', ''));
+                          return (
+                            <a
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                openBibleRef(ref);
+                              }}
+                              {...props}
+                            >
+                              {children}
+                            </a>
+                          );
+                        }
+                        return <a href={href} {...props}>{children}</a>;
+                      },
+                    }}
+                  >
+                    {enrichContentWithIcons(modalMessageContent)}
+                  </ReactMarkdown>
                 )}
               </div>
             </div>
           </DialogContent>
         </Dialog>
       </div>
+      {/* Bible passage dialog */}
+      <BiblePassageDialog reference={passageRef} open={passageOpen} onOpenChange={setPassageOpen} />
     </div>
   );
 };
