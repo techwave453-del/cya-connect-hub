@@ -629,21 +629,21 @@ const AdminPage = () => {
                 <CardDescription>Manage all registered users. Deleting a user will permanently remove their account and all associated data.</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
+                <div className="space-y-2 overflow-x-auto">
                   {profiles.map((profile) => (
-                    <div key={profile.id} className="flex items-center justify-between gap-3 p-3 bg-secondary/50 rounded-lg">
-                      <div className="flex items-center gap-3">
+                    <div key={profile.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 p-2 sm:p-3 bg-secondary/50 rounded-lg">
+                      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                         {profile.avatar_url ? (
-                          <img src={profile.avatar_url} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
+                          <img src={profile.avatar_url} alt="" className="w-5 h-5 min-w-5 min-h-5 rounded-full object-cover flex-shrink-0" />
                         ) : (
-                          <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                            <Users className="h-2 w-2 text-primary" />
+                          <div className="w-5 h-5 min-w-5 min-h-5 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                            <Users className="h-2.5 w-2.5 text-primary" />
                           </div>
                         )}
-                        <div>
-                          <span className="text-foreground font-medium">{profile.username}</span>
+                        <div className="min-w-0">
+                          <p className="text-foreground font-medium truncate text-sm sm:text-base">{profile.username}</p>
                           {profile.user_id === user?.id && (
-                            <span className="ml-2 text-xs text-muted-foreground">(You)</span>
+                            <span className="text-xs text-muted-foreground">(You)</span>
                           )}
                         </div>
                       </div>
@@ -653,7 +653,7 @@ const AdminPage = () => {
                           size="icon"
                           onClick={() => setUserToDelete(profile)}
                           disabled={loadingAction}
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 flex-shrink-0"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
