@@ -16,7 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import BiblePassageDialog from '@/components/BiblePassageDialog';
+import { BiblePassageDialog } from '@/components/BiblePassageDialog';
 
 // Helper function to enrich markdown with icons and visual formatting
   const enrichContentWithIcons = (content: string): string => {

@@ -2,6 +2,7 @@ import { Heart, MessageCircle, Share2, MoreVertical, Pencil, Trash2 } from "luci
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import React, { useState } from "react";
+import ReactMarkdown from 'react-markdown';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +25,8 @@ import EditPostDialog from "./EditPostDialog";
 import CommentsDialog from "./CommentsDialog";
 import { usePostLikes } from "@/hooks/usePostLikes";
 import { toast } from "sonner";
+import { BiblePassageDialog } from '@/components/BiblePassageDialog';
+import { enrichContentWithIcons, markdownLinkComponents } from '@/lib/markdown';
 
 interface PostCardProps {
   post: Post;
@@ -33,6 +36,12 @@ interface PostCardProps {
   onEdit?: (postId: string, updates: { title?: string; description?: string; hashtag?: string }) => Promise<void>;
   className?: string;
   style?: React.CSSProperties;
+}
+
+// for passage dialog
+interface PassageState {
+  ref: string | null;
+  open: boolean;
 }
 
 const PostCard = ({
@@ -48,6 +57,7 @@ const PostCard = ({
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [commentsDialogOpen, setCommentsDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [passage, setPassage] = useState<PassageState>({ ref: null, open: false });
   
   const { isLiked, loading: likeLoading, toggleLike } = usePostLikes(post.id, currentUserId);
 
@@ -141,7 +151,11 @@ const PostCard = ({
           </span>
 
           {post.description && (
-            <p className="text-muted-foreground text-sm mb-3">{post.description}</p>
+            <div className="text-muted-foreground text-sm mb-3">
+              <ReactMarkdown components={markdownLinkComponents((ref) => setPassage({ ref, open: true }))}>
+                {enrichContentWithIcons(post.description)}
+              </ReactMarkdown>
+            </div>
           )}
           
           {post.image_url && (
@@ -226,6 +240,13 @@ const PostCard = ({
         onOpenChange={setCommentsDialogOpen}
         currentUserId={currentUserId}
         currentUsername={currentUsername}
+      />
+
+      {/* Scripture passage pop-up */}
+      <BiblePassageDialog
+        ref={passage.ref ?? undefined}
+        open={passage.open}
+        onOpenChange={(open) => setPassage((p) => ({ ...p, open }))}
       />
     </>
   );

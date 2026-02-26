@@ -18,7 +18,7 @@ interface ApiVerse {
   text: string;
 }
 
-const BiblePassageDialog = ({ reference, open, onOpenChange }: Props) => {
+export const BiblePassageDialog = ({ reference, open, onOpenChange }: Props) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [verses, setVerses] = useState<ApiVerse[] | null>(null);
@@ -131,4 +131,4 @@ const BiblePassageDialog = ({ reference, open, onOpenChange }: Props) => {
   );
 };
 
-export default BiblePassageDialog;
+// kept as named export only

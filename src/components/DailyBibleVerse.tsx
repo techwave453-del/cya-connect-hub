@@ -1,9 +1,21 @@
 import { useBibleVerse } from "@/hooks/useBibleVerse";
+import { useState } from 'react';
 import { BookOpen, Wifi, WifiOff } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import ReactMarkdown from 'react-markdown';
+import { BiblePassageDialog } from '@/components/BiblePassageDialog';
+import { enrichContentWithIcons, markdownLinkComponents } from '@/lib/markdown';
+
 
 const DailyBibleVerse = () => {
   const { verse, loading, isOnline } = useBibleVerse();
+  const [passageRef, setPassageRef] = useState<string | null>(null);
+  const [passageOpen, setPassageOpen] = useState(false);
+
+  const openBibleRef = (ref: string) => {
+    setPassageRef(ref);
+    setPassageOpen(true);
+  }
 
   if (loading) {
     return (
@@ -49,8 +61,10 @@ const DailyBibleVerse = () => {
         </div>
         
         <blockquote className="text-foreground/90 italic text-base leading-relaxed pl-4 border-l-2 border-primary/50">
-          "{verse.text}"
+          <ReactMarkdown components={markdownLinkComponents(openBibleRef)}>{enrichContentWithIcons(verse.text)}</ReactMarkdown>
         </blockquote>
+      </div>
++      <BiblePassageDialog reference={passageRef} open={passageOpen} onOpenChange={setPassageOpen} />
       </div>
     </div>
   );
