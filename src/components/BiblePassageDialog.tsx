@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/skeleton';
+import { getById, put } from '@/lib/offlineDb';
 
 interface Props {
   reference: string | null;
@@ -30,6 +31,18 @@ const BiblePassageDialog = ({ reference, open, onOpenChange }: Props) => {
       setError(null);
       setVerses(null);
       try {
+        const cacheId = encodeURIComponent(reference.toLowerCase());
+        // Try cache first
+        try {
+          const cached = await getById<{ id: string; reference: string; fetched_at: number; verses: ApiVerse[] }>('bible_passages', cacheId);
+          if (cached && Date.now() - (cached.fetched_at || 0) < 1000 * 60 * 60 * 24) { // 24h cache
+            setVerses(cached.verses);
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          // ignore cache errors
+        }
         const encoded = encodeURIComponent(reference);
         const res = await fetch(`https://bible-api.com/${encoded}`);
         if (!res.ok) throw new Error('Failed to fetch passage');
@@ -37,6 +50,12 @@ const BiblePassageDialog = ({ reference, open, onOpenChange }: Props) => {
         // data.verses is an array
         if (mounted) {
           setVerses(data.verses || null);
+          // store in cache
+          try {
+            await put('bible_passages', { id: cacheId, reference, fetched_at: Date.now(), verses: data.verses || [] });
+          } catch (e) {
+            // ignore cache write errors
+          }
         }
       } catch (e: any) {
         if (mounted) setError(e?.message || 'Error fetching passage');

@@ -1,6 +1,6 @@
 // IndexedDB wrapper for offline data storage
 const DB_NAME = 'cya-offline-db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const MAX_SYNC_QUEUE_AGE = 30 * 24 * 60 * 60 * 1000; // 30 days
 const MAX_STORE_SIZE = 50 * 1024 * 1024; // 50 MB
 
@@ -51,6 +51,11 @@ const openDB = (): Promise<IDBDatabase> => {
       // Store for bible_verses
       if (!database.objectStoreNames.contains('bible_verses')) {
         database.createObjectStore('bible_verses', { keyPath: 'id' });
+      }
+
+      // Store for cached bible passages
+      if (!database.objectStoreNames.contains('bible_passages')) {
+        database.createObjectStore('bible_passages', { keyPath: 'id' });
       }
 
       // Store for daily_story
