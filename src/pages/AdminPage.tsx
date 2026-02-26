@@ -634,9 +634,9 @@ const AdminPage = () => {
                     <div key={profile.id} className="flex items-center justify-between gap-3 p-3 bg-secondary/50 rounded-lg">
                       <div className="flex items-center gap-3">
                         {profile.avatar_url ? (
-                          <img src={profile.avatar_url} alt="" className="w-4 h-4 rounded-full object-cover" />
+                          <img src={profile.avatar_url} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
                         ) : (
-                          <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center">
+                          <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
                             <Users className="h-2 w-2 text-primary" />
                           </div>
                         )}
