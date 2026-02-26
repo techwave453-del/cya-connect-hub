@@ -24,8 +24,8 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
       <OfflineProvider>
-        <SyncStatusProvider>
-          <TooltipProvider>
+        <TooltipProvider>
+          <SyncStatusProvider>
             <DynamicPwaHead />
             <PwaUpdateHandler />
             <Toaster />
@@ -58,8 +58,8 @@ const App = () => (
                 return <RouterProvider router={router} />;
               })()
             }
-          </TooltipProvider>
-        </SyncStatusProvider>
+          </SyncStatusProvider>
+        </TooltipProvider>
       </OfflineProvider>
     </ThemeProvider>
   </QueryClientProvider>

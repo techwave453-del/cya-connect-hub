@@ -95,8 +95,8 @@ export const SyncStatusIndicator = ({ className, showDetails = true }: SyncStatu
   );
 };
 
-// Compact version for headers
-export const SyncStatusBadge = () => {
+// Compact version for headers (safe with error boundary)
+const SyncStatusBadgeContent = () => {
   const { status } = useSyncStatus();
 
   if (status.isOnline && status.totalItemsQueued === 0 && !status.lastSyncError) {
@@ -121,6 +121,19 @@ export const SyncStatusBadge = () => {
       )}
     </div>
   );
+};
+
+// Wrapper with error handling for safe usage outside provider
+export const SyncStatusBadge = () => {
+  try {
+    return <SyncStatusBadgeContent />;
+  } catch (error) {
+    // Gracefully return null if context is not available
+    if (error instanceof Error && error.message.includes('SyncStatusProvider')) {
+      return null;
+    }
+    throw error;
+  }
 };
 
 // Helper to format relative time
