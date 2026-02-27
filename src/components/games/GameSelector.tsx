@@ -21,6 +21,7 @@ interface Game {
   description: string;
   icon: React.ReactNode;
   available: boolean;
+  requiresMigration?: boolean;
   color: string;
   featured?: boolean;
 }
@@ -81,6 +82,7 @@ const games: Game[] = [
     description: 'Story decisions through key biblical moments',
     icon: <Route className="w-8 h-8" />,
     available: true,
+    requiresMigration: true,
     color: 'from-indigo-500/20 to-indigo-600/10'
   },
   {
@@ -89,6 +91,7 @@ const games: Game[] = [
     description: 'Advance by solving faith and character challenges',
     icon: <MapPin className="w-8 h-8" />,
     available: true,
+    requiresMigration: true,
     color: 'from-rose-500/20 to-rose-600/10'
   },
   {
@@ -97,6 +100,7 @@ const games: Game[] = [
     description: 'Complete level-based missions with Bible figures',
     icon: <ShieldCheck className="w-8 h-8" />,
     available: true,
+    requiresMigration: true,
     color: 'from-teal-500/20 to-teal-600/10'
   },
   {
@@ -105,6 +109,7 @@ const games: Game[] = [
     description: 'Questions focused on the Old Testament',
     icon: <ScrollText className="w-8 h-8" />,
     available: true,
+    requiresMigration: true,
     color: 'from-orange-500/20 to-orange-600/10'
   },
   {
@@ -113,6 +118,7 @@ const games: Game[] = [
     description: 'Questions focused on the New Testament',
     icon: <Landmark className="w-8 h-8" />,
     available: true,
+    requiresMigration: true,
     color: 'from-cyan-500/20 to-cyan-600/10'
   }
 ];
@@ -120,60 +126,69 @@ const games: Game[] = [
 interface GameSelectorProps {
   onSelectGame: (gameType: GameType) => void;
   selectedGame: GameType | null;
+  storyModesUnlocked: boolean;
 }
 
-const GameSelector = ({ onSelectGame, selectedGame }: GameSelectorProps) => {
+const GameSelector = ({ onSelectGame, selectedGame, storyModesUnlocked }: GameSelectorProps) => {
   return (
     <div className="grid grid-cols-2 gap-3">
-      {games.map((game) => (
-        <Card
-          key={game.id}
-          onClick={() => game.available && onSelectGame(game.id)}
-          className={cn(
-            "relative overflow-hidden transition-all duration-300 cursor-pointer border-2",
-            game.available 
+      {games.map((game) => {
+        const unlockedByMigration = !game.requiresMigration || storyModesUnlocked;
+        const isAvailable = game.available && unlockedByMigration;
+
+        return (
+          <Card
+            key={game.id}
+            onClick={() => isAvailable && onSelectGame(game.id)}
+            className={cn(
+              "relative overflow-hidden transition-all duration-300 cursor-pointer border-2",
+              isAvailable
               ? "hover:scale-[1.02] hover:shadow-lg" 
               : "opacity-60 cursor-not-allowed",
-            selectedGame === game.id 
+              selectedGame === game.id 
               ? "border-primary shadow-lg" 
               : game.featured 
                 ? "border-amber-500/50 hover:border-amber-500"
                 : "border-border hover:border-primary/50",
-            game.featured && "col-span-2"
-          )}
-        >
-          <div className={cn(
-            "absolute inset-0 bg-gradient-to-br opacity-50",
-            game.color
-          )} />
-          <CardContent className={cn(
-            "relative p-4 flex flex-col items-center text-center",
-            game.featured && "flex-row gap-4 text-left"
-          )}>
-            <div className={cn(
-              "mb-2 p-2 rounded-full",
-              game.featured && "mb-0",
-              selectedGame === game.id ? "text-primary" : game.featured ? "text-amber-500" : "text-muted-foreground"
-            )}>
-              {game.icon}
-            </div>
-            <div className={game.featured ? "flex-1" : ""}>
-              <h3 className={cn("font-semibold mb-1", game.featured ? "text-base" : "text-sm")}>
-                {game.title}
-                {game.featured && <span className="ml-2 text-xs bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded-full">Featured</span>}
-              </h3>
-              <p className="text-xs text-muted-foreground line-clamp-2">
-                {game.description}
-              </p>
-            </div>
-            {!game.available && (
-              <div className="absolute top-2 right-2">
-                <Lock className="w-4 h-4 text-muted-foreground" />
-              </div>
+              game.featured && "col-span-2"
             )}
-          </CardContent>
-        </Card>
-      ))}
+          >
+            <div className={cn(
+              "absolute inset-0 bg-gradient-to-br opacity-50",
+              game.color
+            )} />
+            <CardContent className={cn(
+              "relative p-4 flex flex-col items-center text-center",
+              game.featured && "flex-row gap-4 text-left"
+            )}>
+              <div className={cn(
+                "mb-2 p-2 rounded-full",
+                game.featured && "mb-0",
+                selectedGame === game.id ? "text-primary" : game.featured ? "text-amber-500" : "text-muted-foreground"
+              )}>
+                {game.icon}
+              </div>
+              <div className={game.featured ? "flex-1" : ""}>
+                <h3 className={cn("font-semibold mb-1", game.featured ? "text-base" : "text-sm")}>
+                  {game.title}
+                  {game.featured && <span className="ml-2 text-xs bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded-full">Featured</span>}
+                </h3>
+                <p className="text-xs text-muted-foreground line-clamp-2">
+                  {game.description}
+                </p>
+                {game.requiresMigration && !storyModesUnlocked && (
+                  <p className="text-[11px] text-muted-foreground mt-1">Unlock after DB migration</p>
+                )}
+              </div>
+              {!isAvailable && (
+                <div className="absolute top-2 right-2">
+                  <Lock className="w-4 h-4 text-muted-foreground" />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 };
