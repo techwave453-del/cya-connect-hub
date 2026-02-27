@@ -1,26 +1,26 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
-import { initSyncListener } from "./lib/syncManager";
+import { initSyncListener, syncWithServer } from "./lib/syncManager";
+import { registerSW } from "virtual:pwa-register";
 
 // Register service worker for offline support and background sync
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", async () => {
-    try {
-      const reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
-      console.log("[App] Service Worker registered:", reg);
+registerSW({
+  immediate: true,
+  onRegistered(registration) {
+    console.log("[App] Service Worker registered:", registration);
+  },
+  onRegisterError(error) {
+    console.error("[App] Service Worker registration failed:", error);
+  },
+});
 
-      // Listen for messages from service worker (e.g., background sync trigger)
-      navigator.serviceWorker.addEventListener("message", (event) => {
-        if (event.data?.type === "cya-sync") {
-          console.log("[App] Received sync message from SW");
-          // Trigger sync manager
-          const { syncWithServer } = require("./lib/syncManager");
-          syncWithServer();
-        }
-      });
-    } catch (error) {
-      console.error("[App] Service Worker registration failed:", error);
+// Listen for messages from service worker (e.g., background sync trigger)
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.addEventListener("message", (event) => {
+    if (event.data?.type === "cya-sync") {
+      console.log("[App] Received sync message from SW");
+      void syncWithServer();
     }
   });
 }

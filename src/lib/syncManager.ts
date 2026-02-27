@@ -1,12 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
-import { getSyncQueue, removeSyncQueueItem, setMetadata, getMetadata, pruneSyncQueue } from "./offlineDb";
+import { getSyncQueue, removeSyncQueueItem, setMetadata, getMetadata, pruneSyncQueue, markSyncQueueItemFailed } from "./offlineDb";
 
 type TableName = 'posts' | 'post_comments' | 'post_likes' | 'tasks' | 'activities';
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 5;
 const RETRY_DELAY = 1000; // 1 second
 
 let isSyncing = false;
-let syncRetryCount = 0;
+const SYNC_CONFIG_KEY = 'sync:config';
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -48,6 +48,11 @@ export const syncWithServer = async (): Promise<{ success: boolean; synced: numb
     console.log(`[syncManager] Syncing ${queue.length} items`);
     
     for (const item of queue) {
+      if ((item.retryCount || 0) >= MAX_RETRIES) {
+        await removeSyncQueueItem(item.id);
+        continue;
+      }
+
       try {
         const tableName = item.table as TableName;
         const itemData = item.data as { id?: string };
@@ -55,18 +60,26 @@ export const syncWithServer = async (): Promise<{ success: boolean; synced: numb
         
         // Use retry logic for each sync operation
         await retryWithBackoff(async () => {
+          let result:
+            | { error: { message?: string } | null }
+            | undefined;
+
           switch (item.action) {
             case 'insert':
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              await supabase.from(tableName).insert(item.data as any);
+              result = await supabase.from(tableName).insert(item.data as any);
               break;
             case 'update':
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              await supabase.from(tableName).update(item.data as any).eq('id', itemId);
+              result = await supabase.from(tableName).update(item.data as any).eq('id', itemId);
               break;
             case 'delete':
-              await supabase.from(tableName).delete().eq('id', itemId);
+              result = await supabase.from(tableName).delete().eq('id', itemId);
               break;
+          }
+
+          if (result?.error) {
+            throw new Error(result.error.message || 'Supabase sync failed');
           }
         });
         
@@ -74,12 +87,16 @@ export const syncWithServer = async (): Promise<{ success: boolean; synced: numb
         synced++;
       } catch (error) {
         console.error(`[syncManager] Failed to sync item ${item.id}:`, error);
+        const retryCount = await markSyncQueueItemFailed(item.id, error);
+        if (retryCount >= MAX_RETRIES) {
+          await removeSyncQueueItem(item.id);
+          console.warn(`[syncManager] Dropped item ${item.id} after ${retryCount} failed attempts`);
+        }
         errors++;
       }
     }
 
     await setMetadata('lastSync', Date.now());
-    syncRetryCount = 0; // Reset on successful sync
     
     return { success: true, synced, errors, message: `Synced ${synced} items with ${errors} errors` };
   } finally {
@@ -104,6 +121,11 @@ export const getLastSyncTime = async (): Promise<number | null> => {
 
 // Listen for online status and trigger sync
 export const initSyncListener = () => {
+  void setMetadata(SYNC_CONFIG_KEY, {
+    url: import.meta.env.VITE_SUPABASE_URL,
+    key: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+  });
+
   window.addEventListener('online', async () => {
     console.log('[SyncManager] Online - triggering sync');
     const result = await syncWithServer();
@@ -115,10 +137,16 @@ export const initSyncListener = () => {
   });
 
   // Attempt to register Background Sync
-  if ('serviceWorker' in navigator && 'SyncManager' in self) {
-    navigator.serviceWorker?.ready.then(async (registration) => {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(async (registration) => {
+      const syncRegistration = registration as ServiceWorkerRegistration & {
+        sync?: { register: (tag: string) => Promise<void> };
+      };
+
+      if (!syncRegistration.sync) return;
+
       try {
-        await registration.sync.register('cya-sync');
+        await syncRegistration.sync.register('cya-sync');
         console.log('[SyncManager] Background Sync registered');
       } catch (error) {
         console.error('[SyncManager] Background Sync registration failed:', error);

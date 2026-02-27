@@ -33,12 +33,17 @@ export interface QueuedMessage {
 const CHAT_CACHE_STORE = 'bible_chat_cache';
 const MESSAGE_QUEUE_STORE = 'bible_message_queue';
 
+const makeId = (): string => {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
 /**
  * Cache a conversation locally
  */
 export const cacheConversation = async (conversation: CachedConversation): Promise<void> => {
   try {
-    const db = (await import('./offlineDb')).openDB?.();
     const data = {
       ...conversation,
       updatedAt: Date.now()
@@ -114,7 +119,7 @@ export const queueMessage = async (
 ): Promise<string> => {
   try {
     const queuedMsg: QueuedMessage = {
-      id: crypto.randomUUID(),
+      id: makeId(),
       conversationId,
       message: { ...message, timestamp: message.timestamp || Date.now() },
       timestamp: Date.now(),

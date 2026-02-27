@@ -21,6 +21,79 @@ export interface ConflictResolutionResult {
   reason: string;
 }
 
+const ignoredConflictKeys = new Set(['updated_at', 'updatedAt', 'created_at', 'createdAt']);
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> => {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+};
+
+const normalizeForCompare = (value: unknown): unknown => {
+  if (Array.isArray(value)) {
+    return value.map((entry) => normalizeForCompare(entry));
+  }
+
+  if (isPlainObject(value)) {
+    const normalized: Record<string, unknown> = {};
+    for (const key of Object.keys(value).sort()) {
+      if (ignoredConflictKeys.has(key)) continue;
+      normalized[key] = normalizeForCompare(value[key]);
+    }
+    return normalized;
+  }
+
+  return value;
+};
+
+const stableSerialize = (value: unknown): string => {
+  return JSON.stringify(normalizeForCompare(value));
+};
+
+const areDeepEqual = (left: unknown, right: unknown): boolean => {
+  return stableSerialize(left) === stableSerialize(right);
+};
+
+const mergeArrays = (local: unknown[], server: unknown[]): unknown[] => {
+  const deduped = new Map<string, unknown>();
+  for (const item of [...server, ...local]) {
+    deduped.set(stableSerialize(item), item);
+  }
+  return [...deduped.values()];
+};
+
+const mergeValues = (
+  local: unknown,
+  server: unknown,
+  path: string,
+  conflicts: string[]
+): unknown => {
+  if (areDeepEqual(local, server)) return server;
+
+  if (Array.isArray(local) && Array.isArray(server)) {
+    return mergeArrays(local, server);
+  }
+
+  if (isPlainObject(local) && isPlainObject(server)) {
+    const merged: Record<string, unknown> = { ...server };
+    const keys = new Set([...Object.keys(local), ...Object.keys(server)]);
+    for (const key of keys) {
+      const childPath = path ? `${path}.${key}` : key;
+      if (!(key in local)) {
+        merged[key] = server[key];
+        continue;
+      }
+      if (!(key in server)) {
+        merged[key] = local[key];
+        continue;
+      }
+      merged[key] = mergeValues(local[key], server[key], childPath, conflicts);
+    }
+    return merged;
+  }
+
+  conflicts.push(`Field '${path || 'root'}' differs`);
+  return server;
+};
+
 /**
  * Attempt intelligent merge of local and server versions
  * Works best for additive changes (new fields, list additions)
@@ -29,50 +102,12 @@ export const intelligentMerge = (
   local: any,
   server: any
 ): { merged: any; conflicts: string[] } => {
-  const conflicts: string[] = [];
-  const merged = { ...server };
-
-  if (!local || typeof local !== 'object' || !server || typeof server !== 'object') {
+  if (!isPlainObject(local) || !isPlainObject(server)) {
     return { merged: server, conflicts: [] };
   }
 
-  // Merge all keys from local and server
-  const allKeys = new Set([...Object.keys(local), ...Object.keys(server)]);
-
-  for (const key of allKeys) {
-    const localVal = local[key];
-    const serverVal = server[key];
-
-    // If only in server, keep server
-    if (!(key in local)) {
-      merged[key] = serverVal;
-      continue;
-    }
-
-    // If only in local, add it (new field from local)
-    if (!(key in server)) {
-      merged[key] = localVal;
-      continue;
-    }
-
-    // Both have the key
-    if (localVal === serverVal) {
-      merged[key] = serverVal;
-      continue;
-    }
-
-    // Array fields: merge unique items
-    if (Array.isArray(localVal) && Array.isArray(serverVal)) {
-      const merged_arr = [...new Set([...serverVal, ...localVal])];
-      merged[key] = merged_arr;
-      continue;
-    }
-
-    // For primitives or objects, prefer server but track conflict
-    merged[key] = serverVal;
-    conflicts.push(`Field '${key}' differs: local="${localVal}", server="${serverVal}"`);
-  }
-
+  const conflicts: string[] = [];
+  const merged = mergeValues(local, server, '', conflicts);
   return { merged, conflicts };
 };
 
@@ -83,10 +118,7 @@ export const resolveConflict = (
   conflict: ConflictItem,
   strategy: ConflictResolution = 'merged'
 ): ConflictResolutionResult => {
-  const { id, table, localVersion, serverVersion, localUpdatedAt, serverUpdatedAt } = conflict;
-
-  // Strategy: prefer most recent
-  const serverWins = serverUpdatedAt > localUpdatedAt;
+  const { id, localVersion, serverVersion, localUpdatedAt, serverUpdatedAt } = conflict;
 
   switch (strategy) {
     case 'server-wins':
@@ -107,17 +139,19 @@ export const resolveConflict = (
         reason: 'Local version kept (strategy: local-wins)'
       };
 
-    case 'merged':
+    case 'merged': {
       const { merged, conflicts } = intelligentMerge(localVersion, serverVersion);
+      const preferredSource = serverUpdatedAt >= localUpdatedAt ? 'server' : 'local';
       return {
         id,
         strategy: 'merged',
         resolvedData: merged,
         requiresUserAction: conflicts.length > 0,
-        reason: conflicts.length > 0 
-          ? `Merged with ${conflicts.length} field conflict(s): ${conflicts.join('; ')}`
+        reason: conflicts.length > 0
+          ? `Merged with ${conflicts.length} conflict(s), defaulted to ${preferredSource} values on conflicting primitives`
           : 'Successfully merged without conflicts'
       };
+    }
 
     case 'user-choice':
     default:
@@ -126,7 +160,7 @@ export const resolveConflict = (
         strategy: 'user-choice',
         resolvedData: null,
         requiresUserAction: true,
-        reason: `Conflict requires user decision. Server: ${JSON.stringify(serverVersion)}, Local: ${JSON.stringify(localVersion)}`
+        reason: `Conflict requires user decision. Server: ${stableSerialize(serverVersion)}, Local: ${stableSerialize(localVersion)}`
       };
   }
 };
@@ -138,7 +172,7 @@ export const resolveBatchConflicts = (
   conflicts: ConflictItem[],
   strategy: ConflictResolution = 'merged'
 ): ConflictResolutionResult[] => {
-  return conflicts.map(conflict => resolveConflict(conflict, strategy));
+  return conflicts.map((conflict) => resolveConflict(conflict, strategy));
 };
 
 /**
@@ -149,14 +183,11 @@ export const detectConflict = (
   serverVersion: any,
   lastSyncedVersion: any
 ): boolean => {
-  // No conflict if versions are identical
-  if (JSON.stringify(localVersion) === JSON.stringify(serverVersion)) {
+  if (areDeepEqual(localVersion, serverVersion)) {
     return false;
   }
 
-  // Conflict if both local and server changed from last synced
-  const localChanged = JSON.stringify(localVersion) !== JSON.stringify(lastSyncedVersion);
-  const serverChanged = JSON.stringify(serverVersion) !== JSON.stringify(lastSyncedVersion);
-
+  const localChanged = !areDeepEqual(localVersion, lastSyncedVersion);
+  const serverChanged = !areDeepEqual(serverVersion, lastSyncedVersion);
   return localChanged && serverChanged;
 };

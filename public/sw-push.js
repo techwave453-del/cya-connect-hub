@@ -1,4 +1,166 @@
-// Push notification event handler for service worker
+const OFFLINE_DB_NAME = 'cya-offline-db';
+const OFFLINE_DB_VERSION = 5;
+const MAX_SYNC_RETRIES = 5;
+
+const openOfflineDB = () =>
+  new Promise((resolve, reject) => {
+    const request = indexedDB.open(OFFLINE_DB_NAME, OFFLINE_DB_VERSION);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+  });
+
+const getStoreAll = async (storeName) => {
+  const database = await openOfflineDB();
+  return new Promise((resolve, reject) => {
+    const tx = database.transaction(storeName, 'readonly');
+    const store = tx.objectStore(storeName);
+    const request = store.getAll();
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result || []);
+  });
+};
+
+const getMetadataValue = async (key) => {
+  const database = await openOfflineDB();
+  return new Promise((resolve, reject) => {
+    const tx = database.transaction('metadata', 'readonly');
+    const store = tx.objectStore('metadata');
+    const request = store.get(key);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result ? request.result.value : undefined);
+  });
+};
+
+const deleteSyncQueueItem = async (id) => {
+  const database = await openOfflineDB();
+  return new Promise((resolve, reject) => {
+    const tx = database.transaction('sync_queue', 'readwrite');
+    const store = tx.objectStore('sync_queue');
+    const request = store.delete(id);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve();
+  });
+};
+
+const markSyncQueueItemFailed = async (item, errorMessage) => {
+  const database = await openOfflineDB();
+  return new Promise((resolve, reject) => {
+    const tx = database.transaction('sync_queue', 'readwrite');
+    const store = tx.objectStore('sync_queue');
+    const request = store.get(item.id);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const current = request.result;
+      if (!current) {
+        resolve(0);
+        return;
+      }
+      const retryCount = (current.retryCount || 0) + 1;
+      store.put({
+        ...current,
+        retryCount,
+        lastError: String(errorMessage || 'Sync failed'),
+        lastErrorAt: Date.now(),
+      });
+      resolve(retryCount);
+    };
+  });
+};
+
+const applySyncItemToSupabase = async (config, item) => {
+  const table = item.table;
+  const record = item.data || {};
+  const id = record.id;
+
+  if ((item.action === 'update' || item.action === 'delete') && !id) {
+    throw new Error(`Sync item missing id for ${item.action}`);
+  }
+
+  let url = `${config.url}/rest/v1/${table}`;
+  let method = 'POST';
+  let body;
+
+  if (item.action === 'insert') {
+    method = 'POST';
+    body = JSON.stringify(record);
+  } else if (item.action === 'update') {
+    method = 'PATCH';
+    url = `${url}?id=eq.${encodeURIComponent(id)}`;
+    body = JSON.stringify(record);
+  } else if (item.action === 'delete') {
+    method = 'DELETE';
+    url = `${url}?id=eq.${encodeURIComponent(id)}`;
+  }
+
+  const response = await fetch(url, {
+    method,
+    headers: {
+      apikey: config.key,
+      Authorization: `Bearer ${config.key}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=minimal',
+    },
+    body,
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Supabase ${response.status}: ${text || response.statusText}`);
+  }
+};
+
+const processSyncQueue = async () => {
+  const config = await getMetadataValue('sync:config');
+  if (!config || !config.url || !config.key) {
+    console.warn('[Service Worker] Missing sync config in metadata');
+    return { synced: 0, errors: 0 };
+  }
+
+  const queue = await getStoreAll('sync_queue');
+  queue.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+  let synced = 0;
+  let errors = 0;
+
+  for (const item of queue) {
+    try {
+      if ((item.retryCount || 0) >= MAX_SYNC_RETRIES) {
+        await deleteSyncQueueItem(item.id);
+        continue;
+      }
+
+      await applySyncItemToSupabase(config, item);
+      await deleteSyncQueueItem(item.id);
+      synced++;
+    } catch (error) {
+      errors++;
+      const retryCount = await markSyncQueueItemFailed(item, error);
+      if (retryCount >= MAX_SYNC_RETRIES) {
+        await deleteSyncQueueItem(item.id);
+      }
+      console.error('[Service Worker] Sync item failed:', item.id, error);
+    }
+  }
+
+  return { synced, errors };
+};
+
+self.addEventListener('sync', (event) => {
+  console.log('[Service Worker] Sync event:', event.tag);
+
+  if (event.tag !== 'cya-sync') return;
+
+  event.waitUntil(
+    processSyncQueue().then((result) => {
+      return self.clients.matchAll({ includeUncontrolled: true }).then((clientList) => {
+        for (const client of clientList) {
+          client.postMessage({ type: 'cya-sync', detail: result });
+        }
+      });
+    })
+  );
+});
+
 self.addEventListener('push', function(event) {
   console.log('[Service Worker] Push received:', event);
 
@@ -49,7 +211,7 @@ self.addEventListener('push', function(event) {
     image: data.image, // Optional large image
     tag: data.tag || `notification-${Date.now()}`, // Prevents duplicate notifications
     renotify: true, // Always notify even if same tag
-    requireInteraction: !!data.requireInteraction || true, // Keep notification visible until user interacts
+    requireInteraction: data.requireInteraction !== undefined ? !!data.requireInteraction : true, // Keep notification visible until user interacts
     silent: !!data.silent || false, // Play notification sound when false
     vibrate: data.vibrate || [200, 100, 200], // Vibration pattern
     data: {

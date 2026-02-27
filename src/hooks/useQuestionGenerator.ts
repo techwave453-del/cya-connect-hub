@@ -2,7 +2,16 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
-type GameType = "trivia" | "guess_character" | "fill_blank" | "memory_verse";
+type GameType =
+  | "trivia"
+  | "guess_character"
+  | "fill_blank"
+  | "memory_verse"
+  | "choose_path"
+  | "journey_jerusalem"
+  | "character_missions";
+
+type Difficulty = "easy" | "medium" | "hard";
 
 interface GenerateResult {
   success: boolean;
@@ -21,7 +30,7 @@ export const useQuestionGenerator = () => {
   const generateQuestions = useCallback(async (
     gameType: GameType, 
     count: number = 3,
-    options?: { bible_story?: string | null; testament?: 'old' | 'new' | null }
+    options?: { bible_story?: string | null; testament?: 'old' | 'new' | null; difficulty?: Difficulty | null }
   ): Promise<GenerateResult | null> => {
     // Prevent duplicate generations within 30 seconds
     const now = Date.now();
@@ -41,6 +50,7 @@ export const useQuestionGenerator = () => {
       const body: any = { game_type: gameType, count };
       if (options?.bible_story) body.bible_story = options.bible_story;
       if (options?.testament) body.testament = options.testament;
+      if (options?.difficulty) body.difficulty = options.difficulty;
       
       const { data, error } = await supabase.functions.invoke("generate-game-questions", {
         body,
@@ -48,7 +58,19 @@ export const useQuestionGenerator = () => {
 
       if (error) {
         console.error("Function error:", error);
-        throw new Error(error.message || "Failed to generate questions");
+        let detailedMessage = error.message || "Failed to generate questions";
+        const context = (error as { context?: { json?: () => Promise<{ error?: string }> } }).context;
+        if (context?.json) {
+          try {
+            const payload = await context.json();
+            if (payload?.error) {
+              detailedMessage = payload.error;
+            }
+          } catch {
+            // Keep fallback message if payload parsing fails
+          }
+        }
+        throw new Error(detailedMessage);
       }
 
       if (data?.error) {
@@ -81,7 +103,10 @@ export const useQuestionGenerator = () => {
         trivia: "trivia",
         guess_character: "character",
         fill_blank: "fill in the blank",
-        memory_verse: "memory verse"
+        memory_verse: "memory verse",
+        choose_path: "choose your path",
+        journey_jerusalem: "journey to Jerusalem",
+        character_missions: "character mission"
       };
       
       toast({

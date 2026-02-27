@@ -3,7 +3,7 @@
  * Allows read-only access when offline
  */
 
-import { getAll, put, remove, clearStore, putAll } from './offlineDb';
+import { clearStore, getAll, getById, getMetadata, put, putAll, remove, setMetadata } from './offlineDb';
 
 interface CacheMetadata {
   table: string;
@@ -15,6 +15,35 @@ interface CacheMetadata {
 const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
 const MAX_ITEMS_PER_TABLE = 500;
 
+const cacheLastCachedKey = (table: string) => `cache:lastCached:${table}`;
+
+const touchCache = async (table: string): Promise<void> => {
+  try {
+    await setMetadata(cacheLastCachedKey(table), Date.now());
+  } catch (error) {
+    console.error(`[offlineCache] Error updating cache metadata for ${table}:`, error);
+  }
+};
+
+const parseItemTimeMs = (raw: unknown): number | null => {
+  if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+  if (typeof raw === 'string') {
+    const parsed = Date.parse(raw);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
+
+const getItemTimeMs = (item: any): number | null => {
+  return (
+    parseItemTimeMs(item?.updated_at) ??
+    parseItemTimeMs(item?.created_at) ??
+    parseItemTimeMs(item?.timestamp) ??
+    parseItemTimeMs(item?.updatedAt) ??
+    parseItemTimeMs(item?.createdAt)
+  );
+};
+
 /**
  * Cache a single item (insert/update)
  */
@@ -24,6 +53,7 @@ export const cacheItem = async <T extends { id: string }>(
 ): Promise<void> => {
   try {
     await put(table, item);
+    await touchCache(table);
     console.log(`[offlineCache] Cached ${table}/${item.id}`);
   } catch (error) {
     console.error(`[offlineCache] Error caching ${table}/${item.id}:`, error);
@@ -46,6 +76,7 @@ export const cacheItems = async <T extends { id: string }>(
 
     if (toCache.length > 0) {
       await putAll(table, toCache);
+      await touchCache(table);
       console.log(`[offlineCache] Cached ${toCache.length} items in ${table} (${skipped} skipped)`);
     }
 
@@ -78,8 +109,7 @@ export const getCachedItem = async <T extends { id: string }>(
   id: string
 ): Promise<T | undefined> => {
   try {
-    const items = await getAll<T>(table);
-    return items.find(item => item.id === id);
+    return await getById<T>(table, id);
   } catch (error) {
     console.error(`[offlineCache] Error retrieving ${table}/${id}:`, error);
     return undefined;
@@ -147,11 +177,14 @@ export const getCacheStats = async (tables: string[]): Promise<CacheMetadata[]> 
   for (const table of tables) {
     try {
       const items = await getAll(table);
+      const lastCachedRaw = await getMetadata(cacheLastCachedKey(table));
+      const lastCached = typeof lastCachedRaw === 'number' ? lastCachedRaw : 0;
+      const cacheAge = lastCached > 0 ? Date.now() - lastCached : 0;
       stats.push({
         table,
         count: items.length,
-        lastCached: Date.now(),
-        cacheAge: 0
+        lastCached,
+        cacheAge
       });
     } catch (error) {
       console.error(`[offlineCache] Error getting stats for ${table}:`, error);
@@ -174,8 +207,10 @@ export const pruneCacheTable = async (
     const now = Date.now();
 
     for (const item of items) {
-      const itemAge = item.updated_at || item.created_at || 0;
-      if (now - itemAge > maxAge) {
+      const itemTimeMs = getItemTimeMs(item);
+      if (!itemTimeMs) continue;
+
+      if (now - itemTimeMs > maxAge) {
         await remove(table, item.id);
         removed++;
       }

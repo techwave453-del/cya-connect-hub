@@ -1,19 +1,78 @@
 // IndexedDB wrapper for offline data storage
 const DB_NAME = 'cya-offline-db';
-const DB_VERSION = 3;
+const DB_VERSION = 5;
 const MAX_SYNC_QUEUE_AGE = 30 * 24 * 60 * 60 * 1000; // 30 days
 const MAX_STORE_SIZE = 50 * 1024 * 1024; // 50 MB
 
-interface SyncQueueItem {
+export interface SyncQueueItem {
   id: string;
   table: string;
   action: 'insert' | 'update' | 'delete';
   data: object;
   timestamp: number;
-  retryCount?: number;
+  retryCount: number;
+  lastError?: string;
+  lastErrorAt?: number;
 }
 
 let db: IDBDatabase | null = null;
+
+const makeId = (): string => {
+  // `crypto.randomUUID` is not available on some older browsers.
+  // This is only used for client-side queue ids.
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
+const getRecordId = (data: object): string | null => {
+  const maybeId = (data as { id?: unknown }).id;
+  return typeof maybeId === 'string' && maybeId.length > 0 ? maybeId : null;
+};
+
+const coalesceSyncItems = (
+  existing: SyncQueueItem,
+  next: { action: 'insert' | 'update' | 'delete'; data: object; timestamp: number }
+): SyncQueueItem | null => {
+  const nextData = next.data as Record<string, unknown>;
+  const existingData = existing.data as Record<string, unknown>;
+  const timestamp = next.timestamp;
+
+  if (existing.action === 'insert' && next.action === 'update') {
+    return { ...existing, data: { ...existingData, ...nextData }, timestamp };
+  }
+
+  if (existing.action === 'insert' && next.action === 'delete') {
+    return null;
+  }
+
+  if (existing.action === 'update' && next.action === 'update') {
+    return { ...existing, data: { ...existingData, ...nextData }, timestamp };
+  }
+
+  if (existing.action === 'update' && next.action === 'delete') {
+    return { ...existing, action: 'delete', data: { id: nextData.id }, timestamp };
+  }
+
+  if (existing.action === 'delete' && (next.action === 'insert' || next.action === 'update')) {
+    return { ...existing, action: 'update', data: nextData, timestamp };
+  }
+
+  if (existing.action === 'delete' && next.action === 'delete') {
+    return { ...existing, timestamp };
+  }
+
+  if (existing.action === 'insert' && next.action === 'insert') {
+    return { ...existing, data: { ...existingData, ...nextData }, timestamp };
+  }
+
+  return {
+    ...existing,
+    action: next.action,
+    data: nextData,
+    timestamp,
+  };
+};
 
 const openDB = (): Promise<IDBDatabase> => {
   return new Promise((resolve, reject) => {
@@ -36,6 +95,16 @@ const openDB = (): Promise<IDBDatabase> => {
       // Store for posts
       if (!database.objectStoreNames.contains('posts')) {
         database.createObjectStore('posts', { keyPath: 'id' });
+      }
+
+      // Store for post comments
+      if (!database.objectStoreNames.contains('post_comments')) {
+        database.createObjectStore('post_comments', { keyPath: 'id' });
+      }
+
+      // Store for post likes
+      if (!database.objectStoreNames.contains('post_likes')) {
+        database.createObjectStore('post_likes', { keyPath: 'id' });
       }
 
       // Store for tasks
@@ -83,10 +152,28 @@ const openDB = (): Promise<IDBDatabase> => {
         database.createObjectStore('auth_session', { keyPath: 'id' });
       }
 
+      // Store for cached Bible chat conversations
+      if (!database.objectStoreNames.contains('bible_chat_cache')) {
+        database.createObjectStore('bible_chat_cache', { keyPath: 'id' });
+      }
+
+      // Store for queued Bible chat messages
+      if (!database.objectStoreNames.contains('bible_message_queue')) {
+        const queueStore = database.createObjectStore('bible_message_queue', { keyPath: 'id' });
+        queueStore.createIndex('conversationId', 'conversationId', { unique: false });
+        queueStore.createIndex('timestamp', 'timestamp', { unique: false });
+      }
+
       // Store for sync queue (offline changes to sync later)
       if (!database.objectStoreNames.contains('sync_queue')) {
         const syncStore = database.createObjectStore('sync_queue', { keyPath: 'id' });
         syncStore.createIndex('timestamp', 'timestamp', { unique: false });
+        syncStore.createIndex('table', 'table', { unique: false });
+      } else {
+        const syncStore = request.transaction?.objectStore('sync_queue');
+        if (syncStore && !syncStore.indexNames.contains('table')) {
+          syncStore.createIndex('table', 'table', { unique: false });
+        }
       }
 
       // Store for metadata (last sync time, etc.)
@@ -173,26 +260,60 @@ export const clearStore = async (storeName: string): Promise<void> => {
 // Sync queue operations
 export const addToSyncQueue = async (item: { table: string; action: 'insert' | 'update' | 'delete'; data: object }): Promise<void> => {
   const database = await openDB();
-  const syncItem: SyncQueueItem = {
-    id: crypto.randomUUID(),
-    table: item.table,
-    action: item.action,
-    data: item.data,
-    timestamp: Date.now(),
-  };
-  
+
   return new Promise((resolve, reject) => {
     const transaction = database.transaction('sync_queue', 'readwrite');
     const store = transaction.objectStore('sync_queue');
-    const request = store.put(syncItem);
+    const now = Date.now();
+    const recordId = getRecordId(item.data);
+    const request = store.getAll();
 
     request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve();
+    request.onsuccess = () => {
+      const queued = (request.result as SyncQueueItem[]) || [];
+      const existing = recordId
+        ? queued.find((entry) => entry.table === item.table && getRecordId(entry.data) === recordId)
+        : undefined;
+
+      if (!existing) {
+        store.put({
+          id: makeId(),
+          table: item.table,
+          action: item.action,
+          data: item.data,
+          timestamp: now,
+          retryCount: 0,
+        } satisfies SyncQueueItem);
+        return;
+      }
+
+      const merged = coalesceSyncItems(existing, {
+        action: item.action,
+        data: item.data,
+        timestamp: now,
+      });
+
+      if (!merged) {
+        store.delete(existing.id);
+        return;
+      }
+
+      store.put({
+        ...merged,
+        retryCount: 0,
+        lastError: undefined,
+        lastErrorAt: undefined,
+      } satisfies SyncQueueItem);
+    };
+
+    transaction.onerror = () => reject(transaction.error);
+    transaction.oncomplete = () => resolve();
   });
 };
 
 export const getSyncQueue = async (): Promise<SyncQueueItem[]> => {
-  return getAll<SyncQueueItem>('sync_queue');
+  const queue = await getAll<SyncQueueItem>('sync_queue');
+  return queue.sort((a, b) => a.timestamp - b.timestamp);
 };
 
 export const clearSyncQueue = async (): Promise<void> => {
@@ -201,6 +322,33 @@ export const clearSyncQueue = async (): Promise<void> => {
 
 export const removeSyncQueueItem = async (id: string): Promise<void> => {
   await remove('sync_queue', id);
+};
+
+export const markSyncQueueItemFailed = async (id: string, error: unknown): Promise<number> => {
+  const database = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction('sync_queue', 'readwrite');
+    const store = transaction.objectStore('sync_queue');
+    const request = store.get(id);
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const item = request.result as SyncQueueItem | undefined;
+      if (!item) {
+        resolve(0);
+        return;
+      }
+
+      const retryCount = (item.retryCount || 0) + 1;
+      store.put({
+        ...item,
+        retryCount,
+        lastError: String(error),
+        lastErrorAt: Date.now(),
+      } satisfies SyncQueueItem);
+      resolve(retryCount);
+    };
+  });
 };
 
 // Metadata operations

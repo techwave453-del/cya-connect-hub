@@ -8,6 +8,13 @@ const ASSETS_TO_CACHE = [
   '/pwa-512x512.png'
 ];
 
+// Keep push + sync logic in one place (also used by Workbox `dist/sw.js`).
+try {
+  importScripts('/sw-push.js');
+} catch (e) {
+  console.warn('[SW] Failed to import /sw-push.js', e);
+}
+
 self.addEventListener('install', (event) => {
   console.log('[SW] Install');
   event.waitUntil(
@@ -58,20 +65,6 @@ self.addEventListener('fetch', (event) => {
         });
     })
   );
-});
-
-// Listen for background sync event and notify clients to run sync
-self.addEventListener('sync', (event) => {
-  console.log('[SW] Sync event', event.tag);
-  if (event.tag === 'cya-sync') {
-    event.waitUntil(
-      self.clients.matchAll({ includeUncontrolled: true }).then((clients) => {
-        for (const client of clients) {
-          client.postMessage({ type: 'cya-sync' });
-        }
-      })
-    );
-  }
 });
 
 // Listen for messages from clients

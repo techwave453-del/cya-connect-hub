@@ -5,7 +5,16 @@ import { useAuth } from "./useAuth";
 
 export interface BibleGame {
   id: string;
-  game_type: 'trivia' | 'guess_character' | 'fill_blank' | 'memory_verse';
+  game_type:
+    | 'trivia'
+    | 'guess_character'
+    | 'fill_blank'
+    | 'memory_verse'
+    | 'choose_path'
+    | 'journey_jerusalem'
+    | 'character_missions'
+    | 'old_testament'
+    | 'new_testament';
   question: string;
   options: string[] | null;
   correct_answer: string;

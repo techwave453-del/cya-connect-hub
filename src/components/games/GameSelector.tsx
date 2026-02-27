@@ -1,8 +1,19 @@
-import { BookOpen, User, PenTool, Brain, Lock, Calendar, Users } from "lucide-react";
+import { BookOpen, User, PenTool, Brain, Lock, Calendar, Users, ScrollText, Landmark, Route, ShieldCheck, MapPin } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-type GameType = 'trivia' | 'guess_character' | 'fill_blank' | 'memory_verse' | 'daily_challenge' | 'multiplayer';
+type GameType =
+  | 'trivia'
+  | 'guess_character'
+  | 'fill_blank'
+  | 'memory_verse'
+  | 'choose_path'
+  | 'journey_jerusalem'
+  | 'character_missions'
+  | 'old_testament'
+  | 'new_testament'
+  | 'daily_challenge'
+  | 'multiplayer';
 
 interface Game {
   id: GameType;
@@ -63,6 +74,46 @@ const games: Game[] = [
     icon: <Brain className="w-8 h-8" />,
     available: true,
     color: 'from-pink-500/20 to-pink-600/10'
+  },
+  {
+    id: 'choose_path',
+    title: 'Choose Your Path',
+    description: 'Story decisions through key biblical moments',
+    icon: <Route className="w-8 h-8" />,
+    available: true,
+    color: 'from-indigo-500/20 to-indigo-600/10'
+  },
+  {
+    id: 'journey_jerusalem',
+    title: 'Journey to Jerusalem',
+    description: 'Advance by solving faith and character challenges',
+    icon: <MapPin className="w-8 h-8" />,
+    available: true,
+    color: 'from-rose-500/20 to-rose-600/10'
+  },
+  {
+    id: 'character_missions',
+    title: 'Character Missions',
+    description: 'Complete level-based missions with Bible figures',
+    icon: <ShieldCheck className="w-8 h-8" />,
+    available: true,
+    color: 'from-teal-500/20 to-teal-600/10'
+  },
+  {
+    id: 'old_testament',
+    title: 'Old Testament Challenge',
+    description: 'Questions focused on the Old Testament',
+    icon: <ScrollText className="w-8 h-8" />,
+    available: true,
+    color: 'from-orange-500/20 to-orange-600/10'
+  },
+  {
+    id: 'new_testament',
+    title: 'New Testament Challenge',
+    description: 'Questions focused on the New Testament',
+    icon: <Landmark className="w-8 h-8" />,
+    available: true,
+    color: 'from-cyan-500/20 to-cyan-600/10'
   }
 ];
 

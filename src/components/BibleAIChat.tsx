@@ -54,15 +54,6 @@ import { BiblePassageDialog } from '@/components/BiblePassageDialog';
   return enriched;
 };
 
-  // Bible passage dialog state
-  const [passageRef, setPassageRef] = useState<string | null>(null);
-  const [passageOpen, setPassageOpen] = useState(false);
-
-  const openBibleRef = (ref: string) => {
-    setPassageRef(ref);
-    setPassageOpen(true);
-  };
-
 // Helper function to generate story-specific sample questions
 const generateStoryQuestions = (storyTitle: string, refs: string[]): string[] => {
   const mainRef = refs[0] || 'Scripture';
@@ -87,6 +78,8 @@ const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: Bibl
   const [showSavedChats, setShowSavedChats] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [saveTitle, setSaveTitle] = useState('');
+  const [passageRef, setPassageRef] = useState<string | null>(null);
+  const [passageOpen, setPassageOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { messages, isLoading, error, sendMessage, clearChat, loadMessages, generateInsight } = useBibleChat();
@@ -154,6 +147,11 @@ const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: Bibl
     toast({ title: "Copied to clipboard" });
     setTimeout(() => setCopiedIndex(null), 2000);
   }, []);
+
+  const openBibleRef = (ref: string) => {
+    setPassageRef(ref);
+    setPassageOpen(true);
+  };
 
   // Detect if a message is about a biblical story and offer full story
   const detectStoryQuestion = (content: string): boolean => {

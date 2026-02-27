@@ -9,12 +9,27 @@ import GuessCharacter from "@/components/games/GuessCharacter";
 import DailyChallenge from "@/components/games/DailyChallenge";
 import FillInTheBlank from "@/components/games/FillInTheBlank";
 import MemoryVerse from "@/components/games/MemoryVerse";
+import TestamentChallenge from "@/components/games/TestamentChallenge";
+import ChooseYourPath from "@/components/games/ChooseYourPath";
+import JourneyToJerusalem from "@/components/games/JourneyToJerusalem";
+import CharacterMissions from "@/components/games/CharacterMissions";
 import FloatingLeaderboard from "@/components/games/FloatingLeaderboard";
 import MultiplayerMode from "@/components/games/multiplayer/MultiplayerMode";
 import { useOffline } from "@/contexts/OfflineContext";
 import { useNewQuestionsCount } from "@/hooks/useNewQuestionsCount";
 
-type GameType = 'trivia' | 'guess_character' | 'fill_blank' | 'memory_verse' | 'daily_challenge' | 'multiplayer';
+type GameType =
+  | 'trivia'
+  | 'guess_character'
+  | 'fill_blank'
+  | 'memory_verse'
+  | 'choose_path'
+  | 'journey_jerusalem'
+  | 'character_missions'
+  | 'old_testament'
+  | 'new_testament'
+  | 'daily_challenge'
+  | 'multiplayer';
 
 const GamesPage = () => {
   const [selectedGame, setSelectedGame] = useState<GameType | null>(null);
@@ -51,6 +66,30 @@ const GamesPage = () => {
         return <FillInTheBlank onGameEnd={() => {}} />;
       case 'memory_verse':
         return <MemoryVerse onGameEnd={() => {}} />;
+      case 'choose_path':
+        return <ChooseYourPath />;
+      case 'journey_jerusalem':
+        return <JourneyToJerusalem />;
+      case 'character_missions':
+        return <CharacterMissions />;
+      case 'old_testament':
+        return (
+          <TestamentChallenge
+            testament="old"
+            scoreKey="old_testament"
+            title="Old Testament Challenge"
+            emptyMessage="No Old Testament questions are available yet."
+          />
+        );
+      case 'new_testament':
+        return (
+          <TestamentChallenge
+            testament="new"
+            scoreKey="new_testament"
+            title="New Testament Challenge"
+            emptyMessage="No New Testament questions are available yet."
+          />
+        );
       case 'multiplayer':
         return <MultiplayerMode onBack={() => setSelectedGame(null)} />;
       default:

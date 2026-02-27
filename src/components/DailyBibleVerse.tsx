@@ -64,8 +64,7 @@ const DailyBibleVerse = () => {
           <ReactMarkdown components={markdownLinkComponents(openBibleRef)}>{enrichContentWithIcons(verse.text)}</ReactMarkdown>
         </blockquote>
       </div>
-+      <BiblePassageDialog reference={passageRef} open={passageOpen} onOpenChange={setPassageOpen} />
-      </div>
+      <BiblePassageDialog reference={passageRef} open={passageOpen} onOpenChange={setPassageOpen} />
     </div>
   );
 };
