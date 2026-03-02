@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { initSyncListener, syncWithServer } from "./lib/syncManager";
+// @ts-ignore - virtual module provided by vite-plugin-pwa
 import { registerSW } from "virtual:pwa-register";
 
 // Register service worker for offline support and background sync

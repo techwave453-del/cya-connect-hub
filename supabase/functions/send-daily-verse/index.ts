@@ -51,7 +51,7 @@ serve(async (req) => {
     const { data: subs, error: subsError } = await supabase
       .from('push_subscriptions')
       .select('user_id')
-      .is('user_id', null, false);
+      .not('user_id', 'is', null);
 
     if (subsError) {
       console.error('Error fetching subscriptions:', subsError);
