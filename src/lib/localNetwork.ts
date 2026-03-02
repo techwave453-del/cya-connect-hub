@@ -25,7 +25,7 @@ export interface GameRoom {
   hostId: string;
   hostName: string;
   gameName: string;
-  gameType: 'trivia' | 'guess_character' | 'all';
+  gameType: 'trivia' | 'guess_character' | 'fill_blank' | 'memory_verse' | 'daily_challenge' | 'all';
   gameMode: GameMode;
   maxPlayers: number;
   currentPlayers: LocalPeer[];
@@ -36,7 +36,7 @@ export interface GameRoom {
 }
 
 export interface GameMessage {
-  type: 'chat' | 'game_state' | 'answer' | 'score_update' | 'player_join' | 'player_leave' | 'game_start' | 'question' | 'room_update' | 'request_room_info' | 'room_info';
+  type: 'chat' | 'game_state' | 'answer' | 'score_update' | 'player_join' | 'player_leave' | 'game_start' | 'question' | 'room_update' | 'request_room_info' | 'room_info' | 'start_request' | 'lobby_request' | 'lobby_update';
   senderId: string;
   senderName: string;
   payload: any;

@@ -52,13 +52,14 @@ const MultiplayerMode = ({ onBack }: MultiplayerModeProps) => {
     if (gameState?.scores) {
       return Object.entries(gameState.scores).map(([id, total_score]) => {
         const player = room.currentPlayers.find(p => p.id === id);
-        return {
-          user_id: id,
-          total_score: total_score as number,
-          total_games_played: 0,
-          highest_streak: 0,
-          profiles: { username: player?.name, avatar_url: undefined }
-        };
+      return {
+        user_id: id,
+        total_score: total_score as number,
+        total_games_played: 0,
+        highest_streak: 0,
+        games: [],
+        profiles: { username: player?.name || 'Unknown', avatar_url: null }
+      };
       }).sort((a, b) => b.total_score - a.total_score);
     }
 
@@ -67,7 +68,8 @@ const MultiplayerMode = ({ onBack }: MultiplayerModeProps) => {
       total_score: p.score || 0,
       total_games_played: 0,
       highest_streak: 0,
-      profiles: { username: p.name, avatar_url: undefined }
+      games: [],
+      profiles: { username: p.name, avatar_url: null }
     })).sort((a, b) => b.total_score - a.total_score);
   })();
 

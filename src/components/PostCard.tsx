@@ -244,7 +244,7 @@ const PostCard = ({
 
       {/* Scripture passage pop-up */}
       <BiblePassageDialog
-        ref={passage.ref ?? undefined}
+        reference={passage.ref ?? null}
         open={passage.open}
         onOpenChange={(open) => setPassage((p) => ({ ...p, open }))}
       />

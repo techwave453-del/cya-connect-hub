@@ -97,7 +97,9 @@ export const useBibleGames = (gameType?: string) => {
             ...game,
             options: game.options as string[] | null,
             game_type: game.game_type as BibleGame['game_type'],
-            difficulty: game.difficulty as BibleGame['difficulty']
+            difficulty: game.difficulty as BibleGame['difficulty'],
+            bible_story: (game as any).bible_story || null,
+            testament: (game as any).testament || null,
           }));
           setGames(typedGames);
           // Cache for offline use

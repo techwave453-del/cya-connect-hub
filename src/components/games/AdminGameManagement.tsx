@@ -85,8 +85,8 @@ const AdminGameManagement = () => {
           options: game.options as string[] | null,
           game_type: game.game_type as BibleGame['game_type'],
           difficulty: game.difficulty as BibleGame['difficulty'],
-          bible_story: game.bible_story || null, // Handle missing field gracefully
-          testament: game.testament || null, // Handle missing field gracefully
+          bible_story: (game as any).bible_story || null,
+          testament: (game as any).testament || null,
         })));
       }
     } catch (error) {

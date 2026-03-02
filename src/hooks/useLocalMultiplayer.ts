@@ -159,7 +159,8 @@ export const useLocalMultiplayer = () => {
       peers: [],
       messages: [],
       connectionStatus: 'connected',
-      gameState: null
+      gameState: null,
+      sharedQuestions: []
     });
 
     // Host announces presence so guests can discover them
@@ -454,7 +455,7 @@ export const useLocalMultiplayer = () => {
         case 'lobby_request':
           // Guest requested to return to lobby; if we're host, set room.status back to 'waiting'
           if (prev.isHost && connectionManager.current && prev.room) {
-            const updatedRoom = { ...prev.room, status: 'waiting' };
+            const updatedRoom = { ...prev.room, status: 'waiting' as const };
             connectionManager.current.broadcast({
               type: 'room_update',
               senderId: localId.current,
@@ -532,7 +533,7 @@ export const useLocalMultiplayer = () => {
     };
 
     // First update room status and inform peers so clients switch view
-    const updatedRoom = state.room ? { ...state.room, status: 'playing' } : null;
+    const updatedRoom = state.room ? { ...state.room, status: 'playing' as const } : null;
 
     if (updatedRoom) {
       connectionManager.current.broadcast({
@@ -656,7 +657,8 @@ export const useLocalMultiplayer = () => {
       peers: [],
       messages: [],
       connectionStatus: 'disconnected',
-      gameState: null
+      gameState: null,
+      sharedQuestions: []
     });
   }, []);
 
@@ -673,7 +675,7 @@ export const useLocalMultiplayer = () => {
       if (!connectionManager.current) return;
       if (state.isHost && state.room) {
         // Host can just set room back to waiting
-        const updatedRoom = { ...state.room, status: 'waiting' };
+        const updatedRoom = { ...state.room, status: 'waiting' as const };
         connectionManager.current.broadcast({
           type: 'room_update',
           senderId: localId.current,
