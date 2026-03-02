@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 // System prompt to generate full Bible stories with image-friendly descriptions
@@ -27,15 +27,10 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const replicateApiToken = Deno.env.get('REPLICATE_API_TOKEN');
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
 
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error("Missing Supabase credentials");
-    }
-
-    if (!replicateApiToken) {
-      console.warn("REPLICATE_API_TOKEN not configured - will create post without image");
     }
 
     if (!lovableApiKey) {
@@ -45,6 +40,28 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     console.log("Starting daily story generation...");
+
+    // Check if a story already exists for today (UTC)
+    const todayStart = new Date();
+    todayStart.setUTCHours(0, 0, 0, 0);
+    const tomorrowStart = new Date(todayStart);
+    tomorrowStart.setUTCDate(tomorrowStart.getUTCDate() + 1);
+
+    const { data: existingStories } = await supabase
+      .from('posts')
+      .select('id')
+      .eq('hashtag', '#DailyBibleStory')
+      .gte('created_at', todayStart.toISOString())
+      .lt('created_at', tomorrowStart.toISOString())
+      .limit(1);
+
+    if (existingStories && existingStories.length > 0) {
+      console.log("Story already exists for today:", existingStories[0].id);
+      return new Response(
+        JSON.stringify({ success: true, postId: existingStories[0].id, alreadyExists: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Step 1: Generate story using bible-chat API
     console.log("Generating Bible story...");
@@ -88,79 +105,53 @@ serve(async (req) => {
 
     console.log("Visual description:", visualDescription.substring(0, 100) + "...");
 
-    // Step 3: Generate image using Replicate API
+    // Step 3: Generate image using Lovable AI
     let imageUrl: string | null = null;
 
-    if (replicateApiToken) {
-      try {
-        console.log("Generating image with Replicate...");
+    try {
+      console.log("Generating image with Lovable AI...");
 
-        const imagePrompt = `A beautiful, biblical illustration. ${visualDescription} Style: painting, warm lighting, spiritual and reverent atmosphere, high quality, 16:9 aspect ratio`;
+      const imagePrompt = `A beautiful, biblical illustration. ${visualDescription} Style: painting, warm lighting, spiritual and reverent atmosphere, high quality, 16:9 aspect ratio`;
 
-        // Use Replicate API to generate image
-        const replicateResponse = await fetch("https://api.replicate.com/v1/predictions", {
-          method: "POST",
-          headers: {
-            Authorization: `Token ${replicateApiToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            version: "aa9f2b34fe55373d547af6c1a9edd4f15d9152c2b1af74a1173cc14f17e903af", // Flux Pro
-            input: {
-              prompt: imagePrompt,
-              aspect_ratio: "16:9",
-              output_format: "jpeg",
-              num_inference_steps: 25,
+      const imageResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${lovableApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-pro-image-preview",
+          messages: [
+            {
+              role: "user",
+              content: `Generate a beautiful biblical illustration image: ${imagePrompt}`,
             },
-          }),
-        });
+          ],
+        }),
+      });
 
-        if (!replicateResponse.ok) {
-          const error = await replicateResponse.text();
-          console.error("Replicate error:", replicateResponse.status, error);
-        } else {
-          const prediction = await replicateResponse.json();
-          console.log("Prediction ID:", prediction.id);
-
-          // Poll for completion (Replicate predictions are async)
-          let attempts = 0;
-          const maxAttempts = 60; // 5 minutes with 5-second intervals
-          let completed = false;
-
-          while (attempts < maxAttempts && !completed) {
-            await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds
-            attempts++;
-
-            const statusResponse = await fetch(
-              `https://api.replicate.com/v1/predictions/${prediction.id}`,
-              {
-                headers: {
-                  Authorization: `Token ${replicateApiToken}`,
-                },
-              }
-            );
-
-            const statusData = await statusResponse.json();
-            console.log(`Poll attempt ${attempts}: status = ${statusData.status}`);
-
-            if (statusData.status === "succeeded") {
-              imageUrl = statusData.output?.[0];
-              completed = true;
-              console.log("Image generated:", imageUrl?.substring(0, 50) + "...");
-            } else if (statusData.status === "failed") {
-              console.error("Image generation failed:", statusData.error);
-              break;
-            }
-          }
-
-          if (!completed) {
-            console.warn("Image generation timed out");
+      if (!imageResponse.ok) {
+        const error = await imageResponse.text();
+        console.error("Image generation error:", imageResponse.status, error);
+      } else {
+        const imageData = await imageResponse.json();
+        const content = imageData.choices?.[0]?.message?.content;
+        
+        // Check if the response contains an image URL or base64 data
+        if (content) {
+          // Try to extract image URL from markdown or direct URL
+          const urlMatch = content.match(/https?:\/\/[^\s\)]+\.(jpg|jpeg|png|webp)/i);
+          if (urlMatch) {
+            imageUrl = urlMatch[0];
+            console.log("Image generated:", imageUrl?.substring(0, 50) + "...");
+          } else {
+            console.log("Image response received but no URL found, content length:", content.length);
           }
         }
-      } catch (error) {
-        console.error("Image generation error:", error);
-        // Continue anyway - we'll create post without image
       }
+    } catch (error) {
+      console.error("Image generation error:", error);
+      // Continue anyway - we'll create post without image
     }
 
     // Step 4: Upload image to Supabase Storage if generated
