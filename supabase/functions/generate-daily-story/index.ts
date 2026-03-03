@@ -9,15 +9,17 @@ const corsHeaders = {
 // System prompt to generate full Bible stories with image-friendly descriptions
 const STORY_GENERATION_PROMPT = `You are a compelling Bible story narrator. Your task is to:
 
-1. Generate a random, complete Bible story in full narrative format
-2. Write it in an engaging, accessible way (4-6 rich paragraphs)
-3. Include character development, dialogue, and vivid details
-4. Weave in 3-4 relevant scripture references naturally
-5. IMPORTANT: End with a section labeled "[VISUAL_DESCRIPTION]:" followed by 2-3 sentences describing key visual scenes perfect for AI image generation. Be specific about settings, actions, emotions, lighting, and mystical elements.
+1. Start with a line labeled "[TITLE]:" followed by a short, clear biblical story title (e.g. "David and Goliath", "The Burning Bush", "Jonah and the Whale"). This should be the name of the Bible story, NOT a sentence.
+2. Then write the complete Bible story in full narrative format (4-6 rich paragraphs)
+3. Write it in an engaging, accessible way
+4. Include character development, dialogue, and vivid details
+5. Weave in 3-4 relevant scripture references naturally
+6. IMPORTANT: End with a section labeled "[VISUAL_DESCRIPTION]:" followed by 2-3 sentences describing key visual scenes perfect for AI image generation. Be specific about settings, actions, emotions, lighting, and mystical elements.
 
+Example [TITLE]: The Widow's Oil
 Example [VISUAL_DESCRIPTION]: "A young shepherd boy stands on a hillside at sunset, with golden light behind him. He holds a simple stone in one hand, eyes focused with determination. Far below, a massive armored giant looms against the horizon, sunlight glinting off his bronze armor."
 
-Generate a compelling, lesser-known Bible story now. Ensure the visual description is vivid and ready for image generation.`;
+Generate a compelling, lesser-known Bible story now. Ensure the title is a proper biblical story name and the visual description is vivid.`;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -94,17 +96,24 @@ serve(async (req) => {
 
     console.log("Story generated, length:", fullStory.length);
 
-    // Step 2: Extract visual description and story text
+    // Step 2: Extract title, visual description and story text
+    const titleMatch = fullStory.match(/\[TITLE\]:\s*(.+)/);
+    const storyTitle = titleMatch ? titleMatch[1].trim() : "Daily Bible Story";
+
     const visualMatch = fullStory.match(/\[VISUAL_DESCRIPTION\]:\s*([\s\S]*?)$/);
     const visualDescription = visualMatch ? visualMatch[1].trim() : "";
-    const storyText = visualMatch ? fullStory.substring(0, visualMatch.index).trim() : fullStory;
 
-    if (!visualDescription) {
-      console.warn("No visual description found, will use default");
+    // Remove [TITLE] and [VISUAL_DESCRIPTION] sections from story text
+    let storyText = fullStory;
+    if (titleMatch) {
+      storyText = storyText.replace(/\[TITLE\]:\s*.+\n?/, '').trim();
+    }
+    if (visualMatch) {
+      storyText = storyText.substring(0, storyText.indexOf('[VISUAL_DESCRIPTION]')).trim();
     }
 
+    console.log("Story title:", storyTitle);
     console.log("Visual description:", visualDescription.substring(0, 100) + "...");
-
     // Step 3: Generate image using Lovable AI
     let imageUrl: string | null = null;
 
@@ -190,13 +199,7 @@ serve(async (req) => {
       }
     }
 
-    // Step 5: Extract story title (first line or first sentence)
-    const titleMatch = storyText.match(/^[^.!?]+[.!?]/);
-    const storyTitle = titleMatch
-      ? titleMatch[0].substring(0, 100) // Limit to 100 chars
-      : "Daily Bible Story";
-
-    // Step 6: Create post in database
+    // Step 5: Create post in database
     console.log("Creating post in database...");
 
     // Use system UUID (00000000...) for automated posts, bypasses need for admin user

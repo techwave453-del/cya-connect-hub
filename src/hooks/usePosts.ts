@@ -45,6 +45,7 @@ export const usePosts = () => {
         const { data, error: fetchError } = await supabase
           .from("posts")
           .select("*")
+          .neq("hashtag", "#DailyBibleStory")
           .order("created_at", { ascending: false })
           .limit(CACHE_LIMIT);
 
