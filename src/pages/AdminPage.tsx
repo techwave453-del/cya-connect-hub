@@ -29,6 +29,7 @@ import {
 import { z } from "zod";
 import AdminGameManagement from "@/components/games/AdminGameManagement";
 import BrandingManagement from "@/components/admin/BrandingManagement";
+import DailyStoryManagement from "@/components/admin/DailyStoryManagement";
 
 const emailSchema = z.string().email("Invalid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
@@ -1047,7 +1048,7 @@ const AdminPage = () => {
           </TabsContent>
 
           <TabsContent value="verses" className="space-y-6">
-            <DailyStoryGenerator toast={toast} />
+            <DailyStoryManagement />
             <Card className="bg-card border-border">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -1160,80 +1161,6 @@ const AdminPage = () => {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  );
-};
-
-// Daily Story Generator component for admin panel
-const DailyStoryGenerator = ({ toast }: { toast: any }) => {
-  const [generating, setGenerating] = useState(false);
-  const [lastResult, setLastResult] = useState<string | null>(null);
-
-  const handleGenerate = async () => {
-    setGenerating(true);
-    setLastResult(null);
-    try {
-      const { data, error } = await supabase.functions.invoke('generate-daily-story');
-      
-      if (error) {
-        throw error;
-      }
-      
-      if (data?.error) {
-        throw new Error(data.error);
-      }
-      
-      setLastResult(`Story created successfully! ${data?.imageGenerated ? 'Image included.' : 'No image generated.'}`);
-      toast({ title: "Daily Story Generated", description: "The story is now visible on the homepage." });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to generate story";
-      setLastResult(`Error: ${message}`);
-      toast({ title: "Generation Failed", description: message, variant: "destructive" });
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  return (
-    <Card className="bg-gradient-to-br from-amber-50/50 via-card to-amber-50/30 dark:from-amber-950/20 dark:via-card dark:to-amber-950/10 border-border">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-          Daily Bible Story
-        </CardTitle>
-        <CardDescription>
-          Generate today's Bible story with AI. This creates a post with the #DailyBibleStory hashtag that appears on the homepage.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <Button
-          onClick={handleGenerate}
-          disabled={generating}
-          className="gap-2"
-        >
-          {generating ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Generating Story...
-            </>
-          ) : (
-            <>
-              <Sparkles className="h-4 w-4" />
-              Generate Today's Story
-            </>
-          )}
-        </Button>
-        {generating && (
-          <p className="text-sm text-muted-foreground">
-            This may take 1-2 minutes as it generates the story text and image...
-          </p>
-        )}
-        {lastResult && (
-          <p className={`text-sm ${lastResult.startsWith('Error') ? 'text-destructive' : 'text-green-600 dark:text-green-400'}`}>
-            {lastResult}
-          </p>
-        )}
-      </CardContent>
-    </Card>
   );
 };
 
