@@ -6,7 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// System prompt to generate full Bible stories with image-friendly descriptions
 const STORY_GENERATION_PROMPT = `You are a compelling Bible story narrator. Your task is to:
 
 1. Start with a line labeled "[TITLE]:" followed by a short, clear biblical story title (e.g. "David and Goliath", "The Burning Bush", "Jonah and the Whale"). This should be the name of the Bible story, NOT a sentence.
@@ -14,10 +13,10 @@ const STORY_GENERATION_PROMPT = `You are a compelling Bible story narrator. Your
 3. Write it in an engaging, accessible way
 4. Include character development, dialogue, and vivid details
 5. Weave in 3-4 relevant scripture references naturally
-6. IMPORTANT: End with a section labeled "[VISUAL_DESCRIPTION]:" followed by 2-3 sentences describing key visual scenes perfect for AI image generation. Be specific about settings, actions, emotions, lighting, and mystical elements.
+6. IMPORTANT: End with a section labeled "[VISUAL_DESCRIPTION]:" followed by 2-3 sentences describing key visual scenes perfect for AI image generation.
 
 Example [TITLE]: The Widow's Oil
-Example [VISUAL_DESCRIPTION]: "A young shepherd boy stands on a hillside at sunset, with golden light behind him. He holds a simple stone in one hand, eyes focused with determination. Far below, a massive armored giant looms against the horizon, sunlight glinting off his bronze armor."
+Example [VISUAL_DESCRIPTION]: "A young shepherd boy stands on a hillside at sunset, with golden light behind him."
 
 Generate a compelling, lesser-known Bible story now. Ensure the title is a proper biblical story name and the visual description is vivid.`;
 
@@ -34,13 +33,11 @@ serve(async (req) => {
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error("Missing Supabase credentials");
     }
-
     if (!lovableApiKey) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
     console.log("Starting daily story generation...");
 
     // Check if a story already exists for today (UTC)
@@ -65,7 +62,7 @@ serve(async (req) => {
       );
     }
 
-    // Step 1: Generate story using bible-chat API
+    // Step 1: Generate story text
     console.log("Generating Bible story...");
     const storyResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -75,13 +72,8 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
-        messages: [
-          {
-            role: "user",
-            content: STORY_GENERATION_PROMPT,
-          },
-        ],
-        temperature: 1, // Allow more creativity for story generation
+        messages: [{ role: "user", content: STORY_GENERATION_PROMPT }],
+        temperature: 1,
       }),
     });
 
@@ -93,7 +85,6 @@ serve(async (req) => {
 
     const storyData = await storyResponse.json();
     const fullStory = storyData.choices[0].message.content;
-
     console.log("Story generated, length:", fullStory.length);
 
     // Step 2: Extract title, visual description and story text
@@ -103,7 +94,6 @@ serve(async (req) => {
     const visualMatch = fullStory.match(/\[VISUAL_DESCRIPTION\]:\s*([\s\S]*?)$/);
     const visualDescription = visualMatch ? visualMatch[1].trim() : "";
 
-    // Remove [TITLE] and [VISUAL_DESCRIPTION] sections from story text
     let storyText = fullStory;
     if (titleMatch) {
       storyText = storyText.replace(/\[TITLE\]:\s*.+\n?/, '').trim();
@@ -113,96 +103,72 @@ serve(async (req) => {
     }
 
     console.log("Story title:", storyTitle);
-    console.log("Visual description:", visualDescription.substring(0, 100) + "...");
-    // Step 3: Generate image using Lovable AI
-    let imageUrl: string | null = null;
 
-    try {
-      console.log("Generating image with Lovable AI...");
-
-      const imagePrompt = `A beautiful, biblical illustration. ${visualDescription} Style: painting, warm lighting, spiritual and reverent atmosphere, high quality, 16:9 aspect ratio`;
-
-      const imageResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${lovableApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-3-pro-image-preview",
-          messages: [
-            {
-              role: "user",
-              content: `Generate a beautiful biblical illustration image: ${imagePrompt}`,
-            },
-          ],
-        }),
-      });
-
-      if (!imageResponse.ok) {
-        const error = await imageResponse.text();
-        console.error("Image generation error:", imageResponse.status, error);
-      } else {
-        const imageData = await imageResponse.json();
-        const content = imageData.choices?.[0]?.message?.content;
-        
-        // Check if the response contains an image URL or base64 data
-        if (content) {
-          // Try to extract image URL from markdown or direct URL
-          const urlMatch = content.match(/https?:\/\/[^\s\)]+\.(jpg|jpeg|png|webp)/i);
-          if (urlMatch) {
-            imageUrl = urlMatch[0];
-            console.log("Image generated:", imageUrl?.substring(0, 50) + "...");
-          } else {
-            console.log("Image response received but no URL found, content length:", content.length);
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Image generation error:", error);
-      // Continue anyway - we'll create post without image
-    }
-
-    // Step 4: Upload image to Supabase Storage if generated
+    // Step 3: Generate image using Lovable AI (with modalities for image output)
     let storedImageUrl: string | null = null;
 
-    if (imageUrl) {
+    if (visualDescription) {
       try {
-        console.log("Downloading and uploading image to Supabase Storage...");
+        console.log("Generating image with Lovable AI...");
+        const imagePrompt = `Generate a beautiful biblical illustration painting: ${visualDescription} Style: warm lighting, spiritual and reverent atmosphere, classical painting style, 16:9 aspect ratio`;
 
-        const imageResponse = await fetch(imageUrl);
-        if (!imageResponse.ok) throw new Error("Failed to fetch generated image");
+        const imageResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${lovableApiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash-image",
+            messages: [{ role: "user", content: imagePrompt }],
+            modalities: ["image", "text"],
+          }),
+        });
 
-        const imageBuffer = await imageResponse.arrayBuffer();
-        const timestamp = new Date().getTime();
-        const fileName = `daily-story-${timestamp}.jpg`;
-
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from("post-images")
-          .upload(fileName, imageBuffer, {
-            contentType: "image/jpeg",
-            upsert: false,
-          });
-
-        if (uploadError) {
-          console.error("Storage upload error:", uploadError);
+        if (!imageResponse.ok) {
+          console.error("Image generation error:", imageResponse.status, await imageResponse.text());
         } else {
-          const { data: publicUrlData } = supabase.storage
-            .from("post-images")
-            .getPublicUrl(fileName);
+          const imageData = await imageResponse.json();
+          const images = imageData.choices?.[0]?.message?.images;
 
-          storedImageUrl = publicUrlData.publicUrl;
-          console.log("Image uploaded successfully:", storedImageUrl);
+          if (images && images.length > 0) {
+            const base64Data = images[0]?.image_url?.url;
+            if (base64Data && base64Data.startsWith('data:image')) {
+              // Extract base64 content and upload to storage
+              const base64Content = base64Data.split(',')[1];
+              const binaryData = Uint8Array.from(atob(base64Content), c => c.charCodeAt(0));
+              
+              const timestamp = new Date().getTime();
+              const fileName = `daily-story-${timestamp}.png`;
+
+              const { error: uploadError } = await supabase.storage
+                .from("post-images")
+                .upload(fileName, binaryData, {
+                  contentType: "image/png",
+                  upsert: false,
+                });
+
+              if (uploadError) {
+                console.error("Storage upload error:", uploadError);
+              } else {
+                const { data: publicUrlData } = supabase.storage
+                  .from("post-images")
+                  .getPublicUrl(fileName);
+                storedImageUrl = publicUrlData.publicUrl;
+                console.log("Image uploaded successfully:", storedImageUrl);
+              }
+            }
+          } else {
+            console.log("No images in response");
+          }
         }
       } catch (error) {
-        console.error("Error handling generated image:", error);
+        console.error("Image generation error:", error);
       }
     }
 
-    // Step 5: Create post in database
+    // Step 4: Create post in database
     console.log("Creating post in database...");
-
-    // Use system UUID (00000000...) for automated posts, bypasses need for admin user
     const systemUserId = "00000000-0000-0000-0000-000000000000";
     const systemUsername = "Scripture Guide";
 
@@ -231,12 +197,10 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         postId: post.id,
-        imageGenerated: !!imageUrl,
-        imagePath: !!storedImageUrl,
+        imageGenerated: !!storedImageUrl,
+        title: storyTitle,
       }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Error in generate-daily-story:", error);

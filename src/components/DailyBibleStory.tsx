@@ -71,9 +71,8 @@ const DailyBibleStory = () => {
               <img
                 src={story.image_url}
                 alt={story.title || "Daily Bible Story"}
-                className="w-full h-56 object-cover"
+                className="w-full max-h-72 object-contain bg-muted/30 rounded-lg"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
             </div>
           )}
 

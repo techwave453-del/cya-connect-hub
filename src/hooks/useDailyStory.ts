@@ -23,40 +23,22 @@ export const useDailyStory = () => {
   const [loading, setLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
-  // Track online/offline status
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
-
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
 
-  // Helper to check if a date is today
-  const isToday = (date: Date): boolean => {
-    const today = new Date();
-    return (
-      date.getFullYear() === today.getFullYear() &&
-      date.getMonth() === today.getMonth() &&
-      date.getDate() === today.getDate()
-    );
-  };
-
-  // Helper to get cached story
   const getStoryFromCache = useCallback(async (): Promise<DailyStory | null> => {
     try {
       const cachedStories = await getAll<DailyStory>(STORE_NAME);
       if (cachedStories.length > 0) {
-        // Get the most recent story (should be today's)
-        const story = cachedStories[cachedStories.length - 1];
-        if (isToday(new Date(story.created_at))) {
-          return story;
-        }
+        return cachedStories[cachedStories.length - 1];
       }
     } catch (e) {
       console.log("Cache read failed:", e);
@@ -64,54 +46,83 @@ export const useDailyStory = () => {
     return null;
   }, []);
 
-  // Fetch story from database
   const fetchStory = useCallback(async () => {
     setLoading(true);
     try {
       if (isOnline) {
-        // Query for today's story (use UTC boundaries to match server)
-        const today = new Date();
-        today.setUTCHours(0, 0, 0, 0);
+        // First check if admin has selected a specific story
+        const { data: settingData } = await supabase
+          .from('app_settings')
+          .select('value')
+          .eq('key', 'selected_daily_story')
+          .maybeSingle();
 
-        const tomorrow = new Date(today);
-        tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+        const selectedId = (settingData?.value as { storyId?: string })?.storyId;
 
-        const { data: stories, error } = await supabase
-          .from('posts')
-          .select('*')
-          .eq('hashtag', '#DailyBibleStory')
-          .gte('created_at', today.toISOString())
-          .lt('created_at', tomorrow.toISOString())
-          .order('created_at', { ascending: false })
-          .limit(1);
+        let dailyStory: DailyStory | null = null;
 
-        if (!error && stories && stories.length > 0) {
-          const dailyStory = stories[0] as DailyStory;
-          // Cache it
-          try {
-            await put(STORE_NAME, dailyStory);
-          } catch (cacheError) {
-            console.log("Cache write failed:", cacheError);
+        if (selectedId) {
+          // Fetch the admin-selected story
+          const { data, error } = await supabase
+            .from('posts')
+            .select('*')
+            .eq('id', selectedId)
+            .eq('hashtag', '#DailyBibleStory')
+            .single();
+
+          if (!error && data) {
+            dailyStory = data as DailyStory;
           }
+        }
+
+        if (!dailyStory) {
+          // Fallback: get today's latest story
+          const today = new Date();
+          today.setUTCHours(0, 0, 0, 0);
+          const tomorrow = new Date(today);
+          tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+
+          const { data: stories, error } = await supabase
+            .from('posts')
+            .select('*')
+            .eq('hashtag', '#DailyBibleStory')
+            .gte('created_at', today.toISOString())
+            .lt('created_at', tomorrow.toISOString())
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+          if (!error && stories && stories.length > 0) {
+            dailyStory = stories[0] as DailyStory;
+          }
+        }
+
+        if (!dailyStory) {
+          // Final fallback: get the most recent story ever
+          const { data: latest, error } = await supabase
+            .from('posts')
+            .select('*')
+            .eq('hashtag', '#DailyBibleStory')
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+          if (!error && latest && latest.length > 0) {
+            dailyStory = latest[0] as DailyStory;
+          }
+        }
+
+        if (dailyStory) {
+          try { await put(STORE_NAME, dailyStory); } catch {}
           setStory(dailyStory);
           setLoading(false);
           return;
         }
       }
 
-      // Try cache if offline or no story found
+      // Offline fallback
       const cachedStory = await getStoryFromCache();
-      if (cachedStory) {
-        setStory(cachedStory);
-        setLoading(false);
-        return;
-      }
-
-      // No story found
-      setStory(null);
+      setStory(cachedStory);
     } catch (err) {
       console.error("Error fetching story:", err);
-      // Try cache as fallback
       const cachedStory = await getStoryFromCache();
       setStory(cachedStory);
     } finally {
@@ -119,30 +130,26 @@ export const useDailyStory = () => {
     }
   }, [isOnline, getStoryFromCache]);
 
-  // Fetch story on mount and when online status changes
   useEffect(() => {
     fetchStory();
   }, [fetchStory]);
 
-  // Set up auto-refresh at midnight
+  // Auto-refresh at midnight
   useEffect(() => {
     const setupMidnightRefresh = () => {
       const now = new Date();
       const tomorrow = new Date(now);
       tomorrow.setDate(tomorrow.getDate() + 1);
       tomorrow.setHours(0, 0, 0, 0);
-
       const timeUntilMidnight = tomorrow.getTime() - now.getTime();
 
       const timeoutId = setTimeout(() => {
         fetchStory();
-        // Recursively set up the next midnight refresh
         setupMidnightRefresh();
       }, timeUntilMidnight);
 
       return () => clearTimeout(timeoutId);
     };
-
     return setupMidnightRefresh();
   }, [fetchStory]);
 
