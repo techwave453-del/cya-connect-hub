@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, Loader2, Trash2, Star, Upload, Image as ImageIcon } from "lucide-react";
+import { Sparkles, Loader2, Trash2, Star, Upload, Image as ImageIcon, Pencil, X, Check } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 interface StoryPost {
   id: string;
@@ -24,6 +25,8 @@ const DailyStoryManagement = () => {
   const [generating, setGenerating] = useState(false);
   const [selectedStoryId, setSelectedStoryId] = useState<string | null>(null);
   const [uploadingImageFor, setUploadingImageFor] = useState<string | null>(null);
+  const [editingStory, setEditingStory] = useState<{ id: string; title: string; description: string } | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -167,6 +170,24 @@ const DailyStoryManagement = () => {
     e.target.value = "";
   };
 
+  const handleSaveEdit = async () => {
+    if (!editingStory) return;
+    setSavingEdit(true);
+    const { error } = await supabase
+      .from("posts")
+      .update({ title: editingStory.title, description: editingStory.description })
+      .eq("id", editingStory.id);
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Story Updated" });
+      setEditingStory(null);
+      fetchStories();
+    }
+    setSavingEdit(false);
+  };
+
   return (
     <div className="space-y-6">
       <input
@@ -252,21 +273,51 @@ const DailyStoryManagement = () => {
                       )}
                     </div>
 
-                    {/* Info */}
+                    {/* Info / Edit Mode */}
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-foreground truncate">
-                        {story.title || "Untitled Story"}
-                      </h4>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(story.created_at).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </p>
-                      <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                        {story.description?.substring(0, 120)}...
-                      </p>
+                      {editingStory?.id === story.id ? (
+                        <div className="space-y-2">
+                          <Input
+                            value={editingStory.title}
+                            onChange={(e) => setEditingStory({ ...editingStory, title: e.target.value })}
+                            placeholder="Story title"
+                            className="font-semibold"
+                          />
+                          <Textarea
+                            value={editingStory.description}
+                            onChange={(e) => setEditingStory({ ...editingStory, description: e.target.value })}
+                            placeholder="Story content"
+                            rows={6}
+                            className="text-sm"
+                          />
+                          <div className="flex gap-2">
+                            <Button size="sm" onClick={handleSaveEdit} disabled={savingEdit} className="gap-1">
+                              {savingEdit ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                              Save
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => setEditingStory(null)} className="gap-1">
+                              <X className="h-3 w-3" />
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <h4 className="font-semibold text-foreground truncate">
+                            {story.title || "Untitled Story"}
+                          </h4>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(story.created_at).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })}
+                          </p>
+                          <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                            {story.description?.substring(0, 120)}...
+                          </p>
+                        </>
+                      )}
                     </div>
 
                     {/* Actions */}
@@ -279,6 +330,18 @@ const DailyStoryManagement = () => {
                         className={selectedStoryId === story.id ? "text-amber-500" : "text-muted-foreground"}
                       >
                         <Star className={`h-4 w-4 ${selectedStoryId === story.id ? "fill-current" : ""}`} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setEditingStory({
+                          id: story.id,
+                          title: story.title || "",
+                          description: story.description || "",
+                        })}
+                        title="Edit story"
+                      >
+                        <Pencil className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
