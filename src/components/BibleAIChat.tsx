@@ -82,7 +82,7 @@ const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: Bibl
   const [passageOpen, setPassageOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { messages, isLoading, error, sendMessage, clearChat, loadMessages, generateInsight } = useBibleChat();
+  const { messages, isLoading, error, isOfflineMode, sendMessage, clearChat, loadMessages, generateInsight } = useBibleChat();
   const { user } = useAuth();
   const { savedChats, loading: loadingSaved, saveChat, deleteChat } = useSavedChats(user);
 
@@ -574,7 +574,7 @@ const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: Bibl
                 {showSavedChats ? 'Saved Conversations' : 'Scripture Guide'}
               </h3>
               <p className="text-xs text-muted-foreground">
-                {showSavedChats ? `${savedChats.length} saved` : 'Bible AI Assistant'}
+                {showSavedChats ? `${savedChats.length} saved` : isOfflineMode ? '📴 Offline Mode' : 'Bible AI Assistant'}
               </p>
             </div>
           </div>
