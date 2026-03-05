@@ -34,18 +34,31 @@
         return [...prev, { role: 'assistant', content: assistantSoFar }];
       });
     };
+
+    const MAX_RETRIES = 3;
+    const fetchWithRetry = async (allMessages: Message[], attempt = 0): Promise<Response> => {
+      const resp = await fetch(CHAT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ messages: allMessages }),
+      });
+
+      if (resp.status === 429 && attempt < MAX_RETRIES) {
+        const delay = Math.min(2000 * Math.pow(2, attempt), 10000);
+        console.log(`Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
+        await new Promise(r => setTimeout(r, delay));
+        return fetchWithRetry(allMessages, attempt + 1);
+      }
+
+      return resp;
+    };
  
      try {
        const allMessages = [...messages, userMsg];
-       
-       const resp = await fetch(CHAT_URL, {
-         method: 'POST',
-         headers: {
-           'Content-Type': 'application/json',
-           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-         },
-         body: JSON.stringify({ messages: allMessages }),
-       });
+       const resp = await fetchWithRetry(allMessages);
  
        if (!resp.ok || !resp.body) {
          if (resp.status === 429) {
@@ -122,7 +135,8 @@
    }, [messages, isLoading]);
 
   const generateInsight = useCallback(async (prompt: string): Promise<string | null> => {
-    try {
+    const MAX_RETRIES = 3;
+    const fetchWithRetry = async (attempt = 0): Promise<Response> => {
       const resp = await fetch(CHAT_URL, {
         method: 'POST',
         headers: {
@@ -131,10 +145,17 @@
         },
         body: JSON.stringify({ messages: [{ role: 'user', content: prompt }] }),
       });
-
-      if (!resp.ok || !resp.body) {
-        throw new Error('Failed to get response');
+      if (resp.status === 429 && attempt < MAX_RETRIES) {
+        const delay = Math.min(2000 * Math.pow(2, attempt), 10000);
+        console.log(`Rate limited (insight), retrying in ${delay}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
+        await new Promise(r => setTimeout(r, delay));
+        return fetchWithRetry(attempt + 1);
       }
+      return resp;
+    };
+
+    try {
+      const resp = await fetchWithRetry();
 
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
