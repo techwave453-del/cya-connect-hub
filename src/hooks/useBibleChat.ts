@@ -1,13 +1,15 @@
- import { useState, useCallback } from 'react';
- 
- type Message = { role: 'user' | 'assistant'; content: string };
- 
- const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bible-chat`;
- 
- export const useBibleChat = () => {
-   const [messages, setMessages] = useState<Message[]>([]);
-   const [isLoading, setIsLoading] = useState(false);
-   const [error, setError] = useState<string | null>(null);
+import { useState, useCallback } from 'react';
+import { generateFallbackResponse } from '@/lib/fallbackChat';
+
+type Message = { role: 'user' | 'assistant'; content: string };
+
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bible-chat`;
+
+export const useBibleChat = () => {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
  
   const sendMessage = useCallback(async (input: string, options?: { suppressUser?: boolean }) => {
     if (!input.trim() || isLoading) return;
@@ -124,10 +126,20 @@
        }
     } catch (e) {
       console.error('Bible chat error:', e);
-      setError(e instanceof Error ? e.message : 'Failed to get response');
-      // Remove the user message on error if we added it locally
-      if (addedUser) {
-        setMessages(prev => prev.filter(m => m !== userMsg));
+      
+      // ── Fallback: try local AI / Bible search ──
+      try {
+        console.log('[useBibleChat] Cloud AI failed, trying fallback...');
+        setIsOfflineMode(true);
+        const fallback = await generateFallbackResponse(input);
+        upsertAssistant(fallback.content);
+        console.log(`[useBibleChat] Fallback source: ${fallback.source}`);
+      } catch (fallbackErr) {
+        console.error('Fallback also failed:', fallbackErr);
+        setError(e instanceof Error ? e.message : 'Failed to get response');
+        if (addedUser) {
+          setMessages(prev => prev.filter(m => m !== userMsg));
+        }
       }
     } finally {
       setIsLoading(false);
@@ -228,5 +240,5 @@
       setError(null);
     }, []);
 
-    return { messages, isLoading, error, sendMessage, clearChat, loadMessages, generateInsight };
+    return { messages, isLoading, error, isOfflineMode, sendMessage, clearChat, loadMessages, generateInsight };
   };

@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/Header";
 import PostCard from "@/components/PostCard";
 import EditProfileDialog from "@/components/EditProfileDialog";
+import BibleDownloadManager from "@/components/BibleDownloadManager";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Edit2, Loader2, User, Calendar, FileText, Church } from "lucide-react";
@@ -274,6 +275,12 @@ const ProfilePage = () => {
         )}
       </div>
 
+      {/* Offline Bible & AI Manager */}
+      {isOwnProfile && (
+        <div className="container pb-8">
+          <BibleDownloadManager />
+        </div>
+      )}
       {/* Edit Profile Dialog */}
       {isOwnProfile && user && (
         <EditProfileDialog
