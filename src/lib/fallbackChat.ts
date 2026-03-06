@@ -128,8 +128,8 @@ export const generateFallbackResponse = async (
   return {
     content: `📴 **You're currently offline**\n\nI can't reach the cloud AI right now. To use Scripture Guide offline:\n\n` +
       `1. **Download the Bible** — Go to Settings and download KJV/Swahili Bible for offline search\n` +
-      `2. **Download AI Model** — Enable the offline AI model (~250MB) for smarter responses\n\n` +
-      `Once downloaded, I can search verses and answer basic questions even without internet! 🙏`,
+      `2. **Download AI Model** — Enable the Qwen2.5 offline AI model (~400MB) for smarter responses\n\n` +
+      `Once downloaded, I can search verses and answer questions even without internet! 🙏`,
     source: 'offline-message',
   };
 };

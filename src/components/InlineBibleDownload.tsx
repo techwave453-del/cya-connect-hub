@@ -117,7 +117,7 @@ const InlineBibleDownload = () => {
         </div>
       ) : (
         <Button size="sm" variant="outline" onClick={handleModel} className="w-full h-7 text-xs" disabled={!!downloading}>
-          <Cpu className="w-3 h-3 mr-1" /> Load Offline AI (~250MB)
+          <Cpu className="w-3 h-3 mr-1" /> Load Offline AI (~400MB)
         </Button>
       )}
     </div>

@@ -1,12 +1,10 @@
 /**
  * Local AI — Transformers.js wrapper for offline Bible Q&A
- * Uses Xenova/flan-t5-small for text generation (lazy loaded)
+ * Uses Qwen2.5-0.5B-Instruct (quantized) for text generation
  */
 
-type Pipeline = any;
-
-let pipeline: Pipeline | null = null;
 let generator: any = null;
+let tokenizer: any = null;
 let isLoadingModel = false;
 let loadError: string | null = null;
 let loadProgress = 0;
@@ -18,9 +16,11 @@ export const getModelStatus = () => ({
   progress: loadProgress,
 });
 
+const MODEL_ID = 'onnx-community/Qwen2.5-0.5B-Instruct';
+
 /**
  * Load the Transformers.js model (lazy — only when user opts in)
- * Downloads ~250MB on first use, then cached by browser.
+ * Downloads ~400MB (quantized) on first use, then cached by browser.
  */
 export const loadModel = async (
   onProgress?: (progress: number, message: string) => void
@@ -35,23 +35,39 @@ export const loadModel = async (
   try {
     onProgress?.(5, 'Loading AI engine...');
 
-    // Dynamic import to avoid bundling Transformers.js unless needed
-    const { pipeline: createPipeline } = await import('@huggingface/transformers');
+    const { pipeline, AutoTokenizer } = await import('@huggingface/transformers');
 
-    onProgress?.(15, 'Downloading AI model (~250MB first time)...');
+    onProgress?.(10, 'Downloading AI model (~400MB first time)...');
 
-    generator = await createPipeline('text2text-generation', 'Xenova/flan-t5-small', {
-      progress_callback: (data: any) => {
-        if (data.status === 'progress' && data.progress) {
-          loadProgress = Math.round(15 + data.progress * 0.8);
-          onProgress?.(loadProgress, `Downloading model: ${Math.round(data.progress)}%`);
-        }
-      },
-    });
+    // Load tokenizer and model in parallel
+    const [tok, gen] = await Promise.all([
+      AutoTokenizer.from_pretrained(MODEL_ID, {
+        progress_callback: (data: any) => {
+          if (data.status === 'progress' && data.progress) {
+            const p = Math.round(10 + data.progress * 0.3);
+            loadProgress = p;
+            onProgress?.(p, `Downloading tokenizer: ${Math.round(data.progress)}%`);
+          }
+        },
+      }),
+      pipeline('text-generation', MODEL_ID, {
+        dtype: 'q4f16',
+        device: 'wasm',
+        progress_callback: (data: any) => {
+          if (data.status === 'progress' && data.progress) {
+            const p = Math.round(40 + data.progress * 0.55);
+            loadProgress = p;
+            onProgress?.(p, `Downloading model: ${Math.round(data.progress)}%`);
+          }
+        },
+      }),
+    ]);
 
+    tokenizer = tok;
+    generator = gen;
     loadProgress = 100;
     onProgress?.(100, 'AI model ready!');
-    console.log('[localAI] Model loaded successfully');
+    console.log('[localAI] Qwen2.5-0.5B-Instruct loaded successfully');
     return true;
   } catch (err) {
     loadError = err instanceof Error ? err.message : 'Failed to load AI model';
@@ -63,33 +79,57 @@ export const loadModel = async (
   }
 };
 
+const SYSTEM_PROMPT = `You are Scripture Guide, a caring and knowledgeable Bible assistant. You help users understand the Bible, explore scripture, and apply biblical teachings to daily life.
+
+Rules:
+- Give concise, clear answers (2-4 paragraphs max)
+- Always reference specific Bible verses when relevant
+- Be warm, encouraging, and spiritually uplifting
+- If given Bible verse context, use it to ground your answer
+- You understand English, Swahili, and Sheng (Kenyan slang)
+- Respond in the same language style the user uses`;
+
 /**
  * Generate a response using the local model.
- * Best for simple Q&A, summaries, and paraphrasing.
  */
 export const generateLocalResponse = async (
   prompt: string,
   context?: string
 ): Promise<string | null> => {
-  if (!generator) return null;
+  if (!generator || !tokenizer) return null;
 
   try {
-    // Construct a focused prompt for the small model
-    let fullPrompt = '';
-    if (context) {
-      fullPrompt = `Based on these Bible verses: ${context.slice(0, 500)}\n\nAnswer this question: ${prompt}`;
-    } else {
-      fullPrompt = `Answer this Bible question briefly: ${prompt}`;
-    }
+    const userContent = context
+      ? `Bible verses for reference:\n${context.slice(0, 800)}\n\nQuestion: ${prompt}`
+      : prompt;
 
-    const result = await generator(fullPrompt, {
-      max_new_tokens: 200,
+    const messages = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: userContent },
+    ];
+
+    const result = await generator(messages, {
+      max_new_tokens: 300,
       temperature: 0.7,
       do_sample: true,
+      top_p: 0.9,
+      return_full_text: false,
     });
 
     const text = result?.[0]?.generated_text?.trim();
-    return text || null;
+    
+    // For chat models, the result may be the last message object
+    if (typeof text === 'object' && text?.content) {
+      return text.content.trim() || null;
+    }
+    
+    // If it's an array of messages, get the last assistant message
+    if (Array.isArray(result?.[0]?.generated_text)) {
+      const lastMsg = result[0].generated_text[result[0].generated_text.length - 1];
+      if (lastMsg?.role === 'assistant') return lastMsg.content?.trim() || null;
+    }
+
+    return typeof text === 'string' ? text : null;
   } catch (err) {
     console.error('[localAI] Generation error:', err);
     return null;
@@ -100,8 +140,6 @@ export const generateLocalResponse = async (
  * Check if the model is available (cached in browser)
  */
 export const isModelCached = (): boolean => {
-  // Check if the model files exist in the browser cache
-  // This is a heuristic — Transformers.js caches in Cache Storage
   return !!generator;
 };
 
@@ -110,7 +148,7 @@ export const isModelCached = (): boolean => {
  */
 export const unloadModel = () => {
   generator = null;
-  pipeline = null;
+  tokenizer = null;
   loadProgress = 0;
   console.log('[localAI] Model unloaded');
 };
