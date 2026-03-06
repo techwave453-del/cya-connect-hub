@@ -17,6 +17,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { BiblePassageDialog } from '@/components/BiblePassageDialog';
+import InlineBibleDownload from '@/components/InlineBibleDownload';
 
 // Helper function to enrich markdown with icons and visual formatting
   const enrichContentWithIcons = (content: string): string => {
@@ -978,6 +979,9 @@ const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: Bibl
                               >
                                 {enrichContentWithIcons(msg.content)}
                               </ReactMarkdown>
+                              {msg.content.includes("You're currently offline") && (
+                                <InlineBibleDownload />
+                              )}
                             </div>
                           ) : (
                             <div className="whitespace-pre-wrap">{msg.content}</div>
