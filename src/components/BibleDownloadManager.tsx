@@ -184,7 +184,7 @@ const BibleDownloadManager = () => {
             </div>
           </div>
           <p className="text-xs text-muted-foreground">
-            Runs a small AI model in your browser for offline Q&A. Downloads ~250MB on first use (cached after).
+            Runs Qwen2.5 AI model in your browser for offline Q&A. Downloads ~400MB on first use (cached after).
           </p>
           {loadingModel ? (
             <div className="space-y-1">
