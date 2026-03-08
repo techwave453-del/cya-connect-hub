@@ -50,6 +50,21 @@ serve(async (req) => {
     if (!imageResponse.ok) {
       const errorText = await imageResponse.text();
       console.error("Image generation error:", imageResponse.status, errorText);
+      
+      // Pass through rate limit and payment errors with correct status codes
+      if (imageResponse.status === 429) {
+        return new Response(JSON.stringify({ error: "Rate limited. Please try again later." }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (imageResponse.status === 402) {
+        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits." }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      
       throw new Error(`Image generation failed: ${imageResponse.status}`);
     }
 
