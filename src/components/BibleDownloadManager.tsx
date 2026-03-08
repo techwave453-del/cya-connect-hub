@@ -74,7 +74,16 @@ const BibleDownloadManager = () => {
     }
   };
 
+  const [memoryWarningShown, setMemoryWarningShown] = useState(false);
+
   const handleLoadModel = async () => {
+    const capability = checkDeviceCapability();
+    if (!capability.safe && !memoryWarningShown) {
+      setMemoryWarningShown(true);
+      toast({ title: '⚠️ Memory Warning', description: capability.warning, variant: 'destructive' });
+      return;
+    }
+    setMemoryWarningShown(false);
     setLoadingModel(true);
     setModelProgress(0);
     try {
