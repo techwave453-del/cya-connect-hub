@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Download, Cpu, CheckCircle, Loader2 } from 'lucide-react';
+import { Download, Cpu, CheckCircle, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { toast } from '@/hooks/use-toast';
@@ -9,7 +9,7 @@ import {
   getBibleDownloadStatus,
   KJV_BOOKS,
 } from '@/lib/bibleData';
-import { loadModel, getModelStatus } from '@/lib/localAI';
+import { loadModel, getModelStatus, checkDeviceCapability } from '@/lib/localAI';
 
 const InlineBibleDownload = () => {
   const [kjvCount, setKjvCount] = useState(0);
@@ -21,6 +21,7 @@ const InlineBibleDownload = () => {
   const [loadingModel, setLoadingModel] = useState(false);
   const [modelProgress, setModelProgress] = useState(0);
   const [modelMsg, setModelMsg] = useState('');
+  const [showMemoryWarning, setShowMemoryWarning] = useState(false);
 
   const refresh = useCallback(async () => {
     const s = await getBibleDownloadStatus();
@@ -52,6 +53,13 @@ const InlineBibleDownload = () => {
   };
 
   const handleModel = async () => {
+    const capability = checkDeviceCapability();
+    if (!capability.safe && !showMemoryWarning) {
+      setShowMemoryWarning(true);
+      toast({ title: '⚠️ Memory Warning', description: capability.warning, variant: 'destructive' });
+      return;
+    }
+    setShowMemoryWarning(false);
     setLoadingModel(true);
     setModelProgress(0);
     try {
@@ -114,6 +122,16 @@ const InlineBibleDownload = () => {
       ) : modelStatus.isLoaded ? (
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <CheckCircle className="w-3 h-3 text-green-500" /> Offline AI active
+        </div>
+      ) : showMemoryWarning ? (
+        <div className="space-y-1.5">
+          <div className="flex items-start gap-1.5 text-[10px] text-destructive">
+            <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+            <span>This may crash your browser on this device. Bible search still works without it.</span>
+          </div>
+          <Button size="sm" variant="destructive" onClick={handleModel} className="w-full h-7 text-xs">
+            <Cpu className="w-3 h-3 mr-1" /> Load Anyway (risky)
+          </Button>
         </div>
       ) : (
         <Button size="sm" variant="outline" onClick={handleModel} className="w-full h-7 text-xs" disabled={!!downloading}>
