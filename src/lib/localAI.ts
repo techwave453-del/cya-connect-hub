@@ -19,6 +19,24 @@ export const getModelStatus = () => ({
 const MODEL_ID = 'onnx-community/Qwen2.5-0.5B-Instruct';
 
 /**
+ * Check if device has enough memory for the AI model.
+ * Returns { safe: boolean; memoryGB?: number; warning?: string }
+ */
+export const checkDeviceCapability = (): { safe: boolean; memoryGB?: number; warning?: string } => {
+  const nav = navigator as any;
+  const memGB = nav.deviceMemory; // undefined on some browsers
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  if (typeof memGB === 'number' && memGB < 4) {
+    return { safe: false, memoryGB: memGB, warning: `Your device has only ${memGB}GB RAM. The AI model (~400MB) may crash the browser. Bible search will still work offline without it.` };
+  }
+  if (isMobile && typeof memGB === 'undefined') {
+    return { safe: false, memoryGB: undefined, warning: 'Mobile devices may not have enough memory for the AI model (~400MB). It could crash your browser. Bible search will still work offline without it.' };
+  }
+  return { safe: true, memoryGB: memGB };
+};
+
+/**
  * Load the Transformers.js model (lazy — only when user opts in)
  * Downloads ~400MB (quantized) on first use, then cached by browser.
  */
