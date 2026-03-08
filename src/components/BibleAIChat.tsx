@@ -536,13 +536,15 @@ const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: Bibl
   }, [currentStoryIdx]);
 
   // Auto-generate image for current story when images are enabled
+  // Only trigger on story index change — NOT on storyImages/generateStoryImage to prevent loops
   useEffect(() => {
     if (!showImages) return;
     const story = BIBLE_STORIES[storyOrder[currentStoryIdx]];
-    if (story && !storyImages[story.id]) {
+    if (story && !storyImages[story.id] && !failedStoryImages.has(story.id) && !generatingImageFor) {
       generateStoryImage(story.id, story.title);
     }
-  }, [currentStoryIdx, storyOrder, showImages, storyImages, generateStoryImage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStoryIdx, showImages]);
 
   const bibleLink = (ref: string) => {
     const q = encodeURIComponent(ref);
