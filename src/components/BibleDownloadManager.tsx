@@ -15,6 +15,7 @@ import {
   loadModel,
   getModelStatus,
   unloadModel,
+  checkDeviceCapability,
 } from '@/lib/localAI';
 
 const BibleDownloadManager = () => {
