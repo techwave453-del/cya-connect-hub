@@ -355,8 +355,11 @@ const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: Bibl
   });
   const [generatingImageFor, setGeneratingImageFor] = useState<string | null>(null);
 
+  // Track failed story IDs to prevent retry loops
+  const [failedStoryImages, setFailedStoryImages] = useState<Set<string>>(new Set());
+
   const generateStoryImage = useCallback(async (storyId: string, storyTitle: string) => {
-    if (storyImages[storyId] || generatingImageFor === storyId) return;
+    if (storyImages[storyId] || generatingImageFor || failedStoryImages.has(storyId)) return;
     setGeneratingImageFor(storyId);
     try {
       const resp = await fetch(
@@ -379,13 +382,18 @@ const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: Bibl
             return updated;
           });
         }
+      } else {
+        // Mark as failed to prevent infinite retry loop
+        console.warn(`Story image generation failed (${resp.status}) for ${storyId}`);
+        setFailedStoryImages(prev => new Set(prev).add(storyId));
       }
     } catch (e) {
       console.error('Failed to generate story image:', e);
+      setFailedStoryImages(prev => new Set(prev).add(storyId));
     } finally {
       setGeneratingImageFor(null);
     }
-  }, [storyImages, generatingImageFor]);
+  }, [storyImages, generatingImageFor, failedStoryImages]);
 
 
 
