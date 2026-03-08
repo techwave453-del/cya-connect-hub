@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getAll, putAll, put, remove as removeFromDb, addToSyncQueue } from "@/lib/offlineDb";
+import { useOnlineStatus } from "./useOnlineStatus";
 
 export interface Activity {
   id: string;
@@ -18,63 +19,46 @@ const STORE_NAME = 'activities';
 export const useActivities = () => {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const isOnline = useOnlineStatus();
 
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  const fetchActivities = async () => {
+  const fetchActivities = useCallback(async () => {
     setLoading(true);
 
+    // Stale-while-revalidate: show cache instantly
     try {
-      if (isOnline) {
+      const cached = await getAll<Activity>(STORE_NAME);
+      if (cached.length > 0) {
+        setActivities(cached.sort((a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        ));
+        setLoading(false);
+      }
+    } catch { /* continue */ }
+
+    if (isOnline) {
+      try {
         const { data, error } = await supabase
           .from("activities")
           .select("*")
           .order("created_at", { ascending: false });
-
-        if (error) {
-          throw error;
-        }
-
-        const serverActivities = (data || []) as Activity[];
-        setActivities(serverActivities);
-        await putAll(STORE_NAME, serverActivities);
-      } else {
-        const cachedActivities = await getAll<Activity>(STORE_NAME);
-        setActivities(cachedActivities.sort((a, b) => 
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        ));
+        if (error) throw error;
+        const serverData = (data || []) as Activity[];
+        setActivities(serverData);
+        await putAll(STORE_NAME, serverData);
+      } catch (err) {
+        console.error("Error fetching activities:", err);
       }
-    } catch (error) {
-      console.error("Error fetching activities:", error);
-      const cachedActivities = await getAll<Activity>(STORE_NAME);
-      setActivities(cachedActivities);
     }
-
     setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchActivities();
   }, [isOnline]);
 
-  // Listen for sync complete
+  useEffect(() => { fetchActivities(); }, [fetchActivities]);
+
   useEffect(() => {
-    const handleSyncComplete = () => {
-      if (isOnline) fetchActivities();
-    };
-    window.addEventListener('sync-complete', handleSyncComplete);
-    return () => window.removeEventListener('sync-complete', handleSyncComplete);
-  }, [isOnline]);
+    const handler = () => { if (isOnline) fetchActivities(); };
+    window.addEventListener('sync-complete', handler);
+    return () => window.removeEventListener('sync-complete', handler);
+  }, [isOnline, fetchActivities]);
 
   const createActivity = async (activity: Omit<Activity, "id" | "created_at" | "updated_at">) => {
     const newActivity: Activity = {
@@ -83,7 +67,6 @@ export const useActivities = () => {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
-
     setActivities(prev => [newActivity, ...prev]);
     await put(STORE_NAME, newActivity);
 
@@ -98,7 +81,6 @@ export const useActivities = () => {
 
   const updateActivity = async (id: string, updates: Partial<Activity>) => {
     setActivities(prev => prev.map(a => a.id === id ? { ...a, ...updates, updated_at: new Date().toISOString() } : a));
-    
     const existing = activities.find(a => a.id === id);
     if (existing) {
       await put(STORE_NAME, { ...existing, ...updates, updated_at: new Date().toISOString() });

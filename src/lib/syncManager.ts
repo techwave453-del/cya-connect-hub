@@ -3,7 +3,7 @@ import { getSyncQueue, removeSyncQueueItem, setMetadata, getMetadata, pruneSyncQ
 
 type TableName = 'posts' | 'post_comments' | 'post_likes' | 'tasks' | 'activities';
 const MAX_RETRIES = 5;
-const RETRY_DELAY = 1000; // 1 second
+const RETRY_DELAY = 1000;
 
 let isSyncing = false;
 const SYNC_CONFIG_KEY = 'sync:config';
@@ -19,7 +19,6 @@ const retryWithBackoff = async <T,>(
       return await fn();
     } catch (error) {
       if (i === retries - 1) throw error;
-      // Exponential backoff: 1s, 2s, 4s, etc.
       const delay = RETRY_DELAY * Math.pow(2, i);
       console.log(`[syncManager] Retry ${i + 1}/${retries} after ${delay}ms`);
       await sleep(delay);
@@ -39,14 +38,14 @@ export const syncWithServer = async (): Promise<{ success: boolean; synced: numb
 
   try {
     const queue = await getSyncQueue();
-    
+
     if (queue.length === 0) {
       await setMetadata('lastSync', Date.now());
       return { success: true, synced: 0, errors: 0, message: 'Queue is empty' };
     }
 
     console.log(`[syncManager] Syncing ${queue.length} items`);
-    
+
     for (const item of queue) {
       if ((item.retryCount || 0) >= MAX_RETRIES) {
         await removeSyncQueueItem(item.id);
@@ -57,12 +56,9 @@ export const syncWithServer = async (): Promise<{ success: boolean; synced: numb
         const tableName = item.table as TableName;
         const itemData = item.data as { id?: string };
         const itemId = itemData.id || '';
-        
-        // Use retry logic for each sync operation
+
         await retryWithBackoff(async () => {
-          let result:
-            | { error: { message?: string } | null }
-            | undefined;
+          let result: { error: { message?: string; code?: string } | null } | undefined;
 
           switch (item.action) {
             case 'insert':
@@ -79,10 +75,20 @@ export const syncWithServer = async (): Promise<{ success: boolean; synced: numb
           }
 
           if (result?.error) {
+            // Handle conflict: if record already exists on insert, treat as success
+            if (item.action === 'insert' && result.error.code === '23505') {
+              console.log(`[syncManager] Duplicate detected for ${tableName}/${itemId}, skipping`);
+              return;
+            }
+            // If record doesn't exist on update/delete, treat as success
+            if ((item.action === 'update' || item.action === 'delete') && result.error.code === 'PGRST116') {
+              console.log(`[syncManager] Record gone for ${tableName}/${itemId}, skipping`);
+              return;
+            }
             throw new Error(result.error.message || 'Supabase sync failed');
           }
-        });
-        
+        }, 3); // fewer retries per item to not block the queue
+
         await removeSyncQueueItem(item.id);
         synced++;
       } catch (error) {
@@ -97,12 +103,16 @@ export const syncWithServer = async (): Promise<{ success: boolean; synced: numb
     }
 
     await setMetadata('lastSync', Date.now());
-    
+
+    // Dispatch event for UI updates
+    window.dispatchEvent(new CustomEvent('sync-complete', {
+      detail: { success: true, synced, errors }
+    }));
+
     return { success: true, synced, errors, message: `Synced ${synced} items with ${errors} errors` };
   } finally {
     isSyncing = false;
 
-    // Prune old items from queue
     try {
       const pruneResult = await pruneSyncQueue();
       if (pruneResult.removed > 0) {
@@ -119,7 +129,6 @@ export const getLastSyncTime = async (): Promise<number | null> => {
   return lastSync as number | null;
 };
 
-// Listen for online status and trigger sync
 export const initSyncListener = () => {
   void setMetadata(SYNC_CONFIG_KEY, {
     url: import.meta.env.VITE_SUPABASE_URL,
@@ -131,12 +140,9 @@ export const initSyncListener = () => {
     const result = await syncWithServer();
     if (result.synced > 0 || result.errors > 0) {
       console.log(`[SyncManager] Sync complete:`, result.message);
-      // Dispatch custom event for UI updates
-      window.dispatchEvent(new CustomEvent('sync-complete', { detail: result }));
     }
   });
 
-  // Attempt to register Background Sync
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.ready.then(async (registration) => {
       const syncRegistration = registration as ServiceWorkerRegistration & {
