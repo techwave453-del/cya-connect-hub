@@ -87,7 +87,7 @@ const OfflineIndicator = () => {
       {/* Sync success flash */}
       {showSuccess && (
         <Badge
-          className="flex items-center gap-1.5 px-3 py-1.5 shadow-lg bg-green-600 text-white border-green-600"
+          className="flex items-center gap-1.5 px-3 py-1.5 shadow-lg bg-primary text-primary-foreground border-primary"
         >
           <CheckCircle2 className="h-3.5 w-3.5" />
           <span className="text-xs">Synced!</span>

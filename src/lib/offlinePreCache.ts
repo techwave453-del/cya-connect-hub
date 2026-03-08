@@ -114,7 +114,7 @@ export const runPreCache = async (): Promise<PreCacheResult[]> => {
       try {
         const data = await t.fetch();
         if (data.length > 0) {
-          await putAll(t.table, data);
+          await putAll(t.table, data as { id: string }[]);
         }
         return { table: t.table, cached: data.length };
       } catch (err) {
