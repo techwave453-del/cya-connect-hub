@@ -18,7 +18,6 @@ import MultiplayerMode from "@/components/games/multiplayer/MultiplayerMode";
 import { useOffline } from "@/contexts/OfflineContext";
 import { useNewQuestionsCount } from "@/hooks/useNewQuestionsCount";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
 
 type GameType =
   | 'trivia'
@@ -35,56 +34,16 @@ type GameType =
 
 const GamesPage = () => {
   const [selectedGame, setSelectedGame] = useState<GameType | null>(null);
-  const [storyModesUnlocked, setStoryModesUnlocked] = useState(false);
   const { isOnline } = useOffline();
   const navigate = useNavigate();
   const { markAsSeen } = useNewQuestionsCount();
-  const migrationLockedGames: GameType[] = [
-    "choose_path",
-    "journey_jerusalem",
-    "character_missions",
-    "old_testament",
-    "new_testament",
-  ];
 
   // Mark questions as seen when visiting the games page
   useEffect(() => {
     markAsSeen();
   }, [markAsSeen]);
 
-  useEffect(() => {
-    let active = true;
-    const checkCapabilities = async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke("get-game-capabilities");
-        if (error) {
-          console.warn("[Games] Capability check failed:", error.message);
-          return;
-        }
-
-        if (active && data?.story_games_unlocked) {
-          setStoryModesUnlocked(true);
-        }
-      } catch (error) {
-        console.warn("[Games] Capability check error:", error);
-      }
-    };
-
-    void checkCapabilities();
-    return () => {
-      active = false;
-    };
-  }, []);
-
   const handleSelectGame = (gameType: GameType) => {
-    if (!storyModesUnlocked && migrationLockedGames.includes(gameType)) {
-      toast({
-        title: "Game locked",
-        description: "This game unlocks after database migrations are applied.",
-        variant: "destructive",
-      });
-      return;
-    }
     setSelectedGame(gameType);
   };
 
@@ -201,7 +160,6 @@ const GamesPage = () => {
             <GameSelector
               onSelectGame={handleSelectGame}
               selectedGame={selectedGame}
-              storyModesUnlocked={storyModesUnlocked}
             />
             
             {/* Coming soon message */}
