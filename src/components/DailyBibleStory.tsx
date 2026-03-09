@@ -3,6 +3,7 @@ import { BookOpen, ChevronDown, ChevronUp, Wifi, WifiOff, Copy, Share2, MessageC
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import BibleAIChat from "@/components/BibleAIChat";
 
