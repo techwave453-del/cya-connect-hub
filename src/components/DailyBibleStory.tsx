@@ -160,9 +160,17 @@ const DailyBibleStory = () => {
             )}
 
             {/* Story Text - formatted with paragraphs */}
-            <div className="text-foreground/90 text-sm">
-              {formatStoryText(displayedText || "")}
-            </div>
+            {expanded ? (
+              <ScrollArea className="max-h-64 pr-3">
+                <div className="text-foreground/90 text-sm">
+                  {formatStoryText(displayedText || "")}
+                </div>
+              </ScrollArea>
+            ) : (
+              <div className="text-foreground/90 text-sm">
+                {formatStoryText(displayedText || "")}
+              </div>
+            )}
 
             {/* Expand/Collapse Button */}
             {isLongStory && (
