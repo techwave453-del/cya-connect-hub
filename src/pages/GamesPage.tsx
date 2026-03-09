@@ -18,7 +18,6 @@ import MultiplayerMode from "@/components/games/multiplayer/MultiplayerMode";
 import { useOffline } from "@/contexts/OfflineContext";
 import { useNewQuestionsCount } from "@/hooks/useNewQuestionsCount";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
 
 type GameType =
   | 'trivia'
