@@ -161,7 +161,6 @@ const GamesPage = () => {
             <GameSelector
               onSelectGame={handleSelectGame}
               selectedGame={selectedGame}
-              storyModesUnlocked={storyModesUnlocked}
             />
             
             {/* Coming soon message */}
