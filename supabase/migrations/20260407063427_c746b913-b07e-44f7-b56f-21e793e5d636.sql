@@ -1,0 +1,21 @@
+
+UPDATE public.posts SET image_url = 'https://seoaftyquktxpidwgzyt.supabase.co/storage/v1/object/public/post-images/story-tower-of-babel.jpg' WHERE id = '470082a5-3f83-4c0f-8b56-48f5d1a9721a';
+UPDATE public.posts SET image_url = 'https://seoaftyquktxpidwgzyt.supabase.co/storage/v1/object/public/post-images/story-raising-of-lazarus.jpg' WHERE id = 'fe52704b-8784-46e3-879c-054b719d45b9';
+UPDATE public.posts SET image_url = 'https://seoaftyquktxpidwgzyt.supabase.co/storage/v1/object/public/post-images/story-peter-walks-on-water.jpg' WHERE id = '8977e96e-e37f-4ae5-bcd0-49804b6cb55d';
+UPDATE public.posts SET image_url = 'https://seoaftyquktxpidwgzyt.supabase.co/storage/v1/object/public/post-images/story-abraham-isaac.jpg' WHERE id = '2037820b-a0d6-4b58-beb0-f468ab1b9e09';
+UPDATE public.posts SET image_url = 'https://seoaftyquktxpidwgzyt.supabase.co/storage/v1/object/public/post-images/story-healing-paralytic.jpg' WHERE id = '3386f880-7947-4185-a149-f2fac3c3428f';
+UPDATE public.posts SET image_url = 'https://seoaftyquktxpidwgzyt.supabase.co/storage/v1/object/public/post-images/story-walls-of-jericho.jpg' WHERE id = 'aca36b18-df03-4859-818b-c74e3517ced2';
+UPDATE public.posts SET image_url = 'https://seoaftyquktxpidwgzyt.supabase.co/storage/v1/object/public/post-images/story-jonah-great-fish.jpg' WHERE id = '26ae5c90-745b-4a3e-b91d-a9b2da6babc9';
+UPDATE public.posts SET image_url = 'https://seoaftyquktxpidwgzyt.supabase.co/storage/v1/object/public/post-images/story-woman-at-the-well.jpg' WHERE id = 'd4c113bb-43c2-499a-ba09-cd46b5c12b6a';
+UPDATE public.posts SET image_url = 'https://seoaftyquktxpidwgzyt.supabase.co/storage/v1/object/public/post-images/story-conversion-of-paul.jpg' WHERE id = '6a387384-4427-4949-accf-6d1b63a22f03';
+UPDATE public.posts SET image_url = 'https://seoaftyquktxpidwgzyt.supabase.co/storage/v1/object/public/post-images/story-feeding-5000.jpg' WHERE id = '300e51c8-0f54-4aea-b2d2-54f5a432fa82';
+UPDATE public.posts SET image_url = 'https://seoaftyquktxpidwgzyt.supabase.co/storage/v1/object/public/post-images/story-daniel-lions-den.jpg' WHERE id = '6d53c57f-1e3c-48cc-8f36-1044ceb18277';
+UPDATE public.posts SET image_url = 'https://seoaftyquktxpidwgzyt.supabase.co/storage/v1/object/public/post-images/story-ruth-and-boaz.jpg' WHERE id = '34375f44-022b-4ba6-93fe-ceb906a91075';
+UPDATE public.posts SET image_url = 'https://seoaftyquktxpidwgzyt.supabase.co/storage/v1/object/public/post-images/story-elijah-mount-carmel.jpg' WHERE id = 'a9fdf5bf-e1ce-44b6-b90f-17278aedb326';
+UPDATE public.posts SET image_url = 'https://seoaftyquktxpidwgzyt.supabase.co/storage/v1/object/public/post-images/story-prodigal-son.jpg' WHERE id = 'c5988462-8684-433c-a12f-2eb53106bb9c';
+UPDATE public.posts SET image_url = 'https://seoaftyquktxpidwgzyt.supabase.co/storage/v1/object/public/post-images/story-fiery-furnace.jpg' WHERE id = '12196fd2-46cd-4639-900c-34ce5b4a2b7a';
+UPDATE public.posts SET image_url = 'https://seoaftyquktxpidwgzyt.supabase.co/storage/v1/object/public/post-images/story-esther.jpg' WHERE id = 'f271bf72-ef6c-47ed-91f9-39d5123ae7c0';
+UPDATE public.posts SET image_url = 'https://seoaftyquktxpidwgzyt.supabase.co/storage/v1/object/public/post-images/story-valley-dry-bones.jpg' WHERE id = '6bff7428-0e45-44be-94a4-875337ff8bfe';
+UPDATE public.posts SET image_url = 'https://seoaftyquktxpidwgzyt.supabase.co/storage/v1/object/public/post-images/story-naaman-healed.jpg' WHERE id = '48faf1f5-c0cc-4553-82b2-2fbf45bd7b0c';
+UPDATE public.posts SET image_url = 'https://seoaftyquktxpidwgzyt.supabase.co/storage/v1/object/public/post-images/story-road-to-emmaus.jpg' WHERE id = '8dbe41f0-d313-4e54-b156-fc6480bd250f';
+UPDATE public.posts SET image_url = 'https://seoaftyquktxpidwgzyt.supabase.co/storage/v1/object/public/post-images/story-gideon-300.jpg' WHERE id = 'b9c5e11c-3028-4abd-8c29-bef87350385e';
