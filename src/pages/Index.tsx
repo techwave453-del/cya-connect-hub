@@ -119,9 +119,6 @@ const Index = () => {
               <DailyBibleVerse />
             </div>
             <BibleStoriesCarousel />
-            <div className="px-4">
-              <DailyBibleStory />
-            </div>
             <IdeasSection onShareIdea={handleShareIdea} />
             
             <div className="px-4 py-4 space-y-4">
@@ -218,8 +215,9 @@ const Index = () => {
         )}
       </main>
       
+      <DailyBibleStory />
       <FloatingActionButton />
-     <BibleAIButton />
+      <BibleAIButton />
 
       {/* Create Post Dialog */}
       {user && profile && (
