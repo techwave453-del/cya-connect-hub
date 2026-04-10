@@ -1,5 +1,5 @@
 import { useDailyStory } from "@/hooks/useDailyStory";
-import { BookOpen, ChevronDown, ChevronUp, Wifi, WifiOff, Copy, Share2, MessageCircle, Check } from "lucide-react";
+import { BookOpen, ChevronDown, ChevronUp, Wifi, WifiOff, Copy, Share2, MessageCircle, Check, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -11,39 +11,13 @@ const DailyBibleStory = () => {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   const [aiChatOpen, setAiChatOpen] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
 
-  if (loading) {
-    return (
-      <div className="bg-gradient-to-br from-amber-50 via-card to-amber-50/50 dark:from-amber-950/20 dark:via-card dark:to-amber-950/10 border border-border rounded-xl overflow-hidden mb-6">
-        <div className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <BookOpen className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-            <Skeleton className="h-5 w-48" />
-          </div>
-          <Skeleton className="h-4 w-full mb-2" />
-          <Skeleton className="h-4 w-3/4 mb-4" />
-          <Skeleton className="h-48 w-full rounded-lg" />
-        </div>
-      </div>
-    );
-  }
-
-  if (!story) {
-    return null;
-  }
-
-  const isLongStory = story.description && story.description.length > 300;
-  const displayedText = expanded
-    ? story.description
-    : story.description?.substring(0, 300) + (isLongStory ? "..." : "");
-
-  // Format story text into paragraphs
+  // Always render the toggle button; panel shows conditionally
   const formatStoryText = (text: string | undefined) => {
     if (!text) return null;
-    // Split by double newlines or single newlines that look like paragraph breaks
     const paragraphs = text.split(/\n\n+|\n(?=[A-Z])/).filter(p => p.trim());
     if (paragraphs.length <= 1) {
-      // Try splitting by sentences for very long single blocks
       const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
       if (sentences.length > 4) {
         const chunks: string[] = [];
@@ -61,6 +35,7 @@ const DailyBibleStory = () => {
   };
 
   const handleCopyText = async () => {
+    if (!story) return;
     const text = `${story.title || "Daily Bible Story"}\n\n${story.description || ""}`;
     try {
       await navigator.clipboard.writeText(text);
@@ -73,14 +48,11 @@ const DailyBibleStory = () => {
   };
 
   const handleShare = async () => {
+    if (!story) return;
     const title = story.title || "Daily Bible Story";
     const text = story.description?.substring(0, 200) + "...";
-    const shareData: ShareData = {
-      title,
-      text: `📖 ${title}\n\n${text}`,
-    };
+    const shareData: ShareData = { title, text: `📖 ${title}\n\n${text}` };
 
-    // If there's an image, try to fetch and share it
     if (story.image_url && navigator.canShare) {
       try {
         const response = await fetch(story.image_url);
@@ -91,157 +63,152 @@ const DailyBibleStory = () => {
           await navigator.share(shareWithImage);
           return;
         }
-      } catch {
-        // Fall through to text-only share
-      }
+      } catch { /* fall through */ }
     }
 
     if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-      } catch (err) {
-        if ((err as Error).name !== 'AbortError') {
-          toast({ title: "Sharing failed", variant: "destructive" });
-        }
+      try { await navigator.share(shareData); } catch (err) {
+        if ((err as Error).name !== 'AbortError') toast({ title: "Sharing failed", variant: "destructive" });
       }
     } else {
-      // Fallback: copy to clipboard
       await handleCopyText();
     }
   };
 
-  const handleAskScriptureGuide = () => {
-    setAiChatOpen(true);
-  };
+  if (loading) return null;
+  if (!story) return null;
+
+  const isLongStory = story.description && story.description.length > 300;
+  const displayedText = expanded
+    ? story.description
+    : story.description?.substring(0, 300) + (isLongStory ? "..." : "");
 
   return (
     <>
-      <div className="relative overflow-hidden bg-gradient-to-br from-amber-50 via-card to-amber-50/50 dark:from-amber-950/20 dark:via-card dark:to-amber-950/10 border border-border rounded-xl mb-6 card-shadow animate-slide-up">
-        {/* Decorative elements */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-200/10 dark:bg-amber-600/5 rounded-full -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-amber-200/10 dark:bg-amber-600/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+      {/* Floating toggle button - bottom left, above FAB */}
+      {!isVisible && (
+        <button
+          onClick={() => setIsVisible(true)}
+          className="fixed bottom-36 left-4 z-40 flex items-center gap-2 px-4 py-2.5 rounded-full bg-amber-600 dark:bg-amber-700 text-white shadow-lg hover:bg-amber-700 dark:hover:bg-amber-600 transition-all duration-300 animate-fade-in"
+        >
+          <BookOpen className="h-4 w-4" />
+          <span className="text-sm font-medium">Today's Story</span>
+        </button>
+      )}
 
-        <div className="relative">
-          {/* Header */}
-          <div className="px-6 pt-6 pb-4">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-                  <BookOpen className="h-5 w-5 text-amber-700 dark:text-amber-400" />
+      {/* Floating panel */}
+      {isVisible && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/40 z-40 animate-fade-in"
+            onClick={() => setIsVisible(false)}
+          />
+
+          {/* Panel */}
+          <div className="fixed inset-x-3 bottom-4 top-16 z-50 flex flex-col animate-slide-up">
+            <div className="relative flex flex-col overflow-hidden bg-gradient-to-br from-amber-50 via-card to-amber-50/50 dark:from-amber-950/20 dark:via-card dark:to-amber-950/10 border border-border rounded-xl card-shadow max-h-full">
+              {/* Decorative elements */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-200/10 dark:bg-amber-600/5 rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-amber-200/10 dark:bg-amber-600/5 rounded-full translate-y-1/2 -translate-x-1/2 pointer-events-none" />
+
+              {/* Close button */}
+              <div className="relative flex items-center justify-between px-6 pt-4 pb-2">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                    <BookOpen className="h-5 w-5 text-amber-700 dark:text-amber-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground">Daily Bible Story</h3>
+                    {story.title && (
+                      <p className="text-base font-semibold text-amber-900 dark:text-amber-300 line-clamp-1">
+                        {story.title}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Daily Bible Story</h3>
-                  {story.title && (
-                    <p className="text-lg font-semibold text-amber-900 dark:text-amber-300 line-clamp-2">
-                      {story.title}
-                    </p>
-                  )}
+                <div className="flex items-center gap-2">
+                  {isOnline ? <Wifi className="h-3 w-3 text-muted-foreground" /> : <WifiOff className="h-3 w-3 text-muted-foreground" />}
+                  <button
+                    onClick={() => setIsVisible(false)}
+                    className="p-1.5 rounded-full hover:bg-muted transition-colors"
+                  >
+                    <X className="h-5 w-5 text-muted-foreground" />
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                {isOnline ? (
-                  <Wifi className="h-3 w-3" />
-                ) : (
-                  <WifiOff className="h-3 w-3" />
+
+              {/* Scrollable content */}
+              <div className="relative flex-1 overflow-y-auto px-6 pb-4">
+                {/* Image */}
+                {story.image_url && (
+                  <div className="relative rounded-lg overflow-hidden mb-4">
+                    <img
+                      src={story.image_url}
+                      alt={story.title || "Daily Bible Story"}
+                      className="w-full max-h-72 object-contain bg-muted/30 rounded-lg"
+                    />
+                  </div>
                 )}
-              </div>
-            </div>
 
-            {/* Image */}
-            {story.image_url && (
-              <div className="relative rounded-lg overflow-hidden mb-4">
-                <img
-                  src={story.image_url}
-                  alt={story.title || "Daily Bible Story"}
-                  className="w-full max-h-72 object-contain bg-muted/30 rounded-lg"
-                />
-              </div>
-            )}
-
-            {/* Story Text - formatted with paragraphs */}
-            {expanded ? (
-              <div className="max-h-64 overflow-y-auto pr-3">
+                {/* Story Text */}
                 <div className="text-foreground/90 text-sm">
                   {formatStoryText(displayedText || "")}
                 </div>
-              </div>
-            ) : (
-              <div className="text-foreground/90 text-sm">
-                {formatStoryText(displayedText || "")}
-              </div>
-            )}
 
-            {/* Expand/Collapse Button */}
-            {isLongStory && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setExpanded(!expanded)}
-                className="text-amber-700 dark:text-amber-400 hover:bg-amber-100/50 dark:hover:bg-amber-900/30 px-0 mt-2"
-              >
-                {expanded ? (
-                  <>
-                    <ChevronUp className="h-4 w-4 mr-1" />
-                    Show Less
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="h-4 w-4 mr-1" />
-                    Read More
-                  </>
+                {/* Expand/Collapse Button */}
+                {isLongStory && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setExpanded(!expanded)}
+                    className="text-amber-700 dark:text-amber-400 hover:bg-amber-100/50 dark:hover:bg-amber-900/30 px-0 mt-2"
+                  >
+                    {expanded ? (
+                      <><ChevronUp className="h-4 w-4 mr-1" />Show Less</>
+                    ) : (
+                      <><ChevronDown className="h-4 w-4 mr-1" />Read More</>
+                    )}
+                  </Button>
                 )}
-              </Button>
-            )}
 
-            {/* Action buttons */}
-            <div className="flex items-center gap-2 mt-4 flex-wrap">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCopyText}
-                className="text-xs gap-1.5"
-              >
-                {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                {copied ? "Copied!" : "Copy"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleShare}
-                className="text-xs gap-1.5"
-              >
-                <Share2 className="h-3.5 w-3.5" />
-                Share
-              </Button>
-              <Button
-                variant="default"
-                size="sm"
-                onClick={handleAskScriptureGuide}
-                className="text-xs gap-1.5 bg-amber-600 hover:bg-amber-700 text-white dark:bg-amber-700 dark:hover:bg-amber-600"
-              >
-                <MessageCircle className="h-3.5 w-3.5" />
-                Ask Scripture Guide
-              </Button>
+                {/* Action buttons */}
+                <div className="flex items-center gap-2 mt-4 flex-wrap">
+                  <Button variant="outline" size="sm" onClick={handleCopyText} className="text-xs gap-1.5">
+                    {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                    {copied ? "Copied!" : "Copy"}
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleShare} className="text-xs gap-1.5">
+                    <Share2 className="h-3.5 w-3.5" />
+                    Share
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => setAiChatOpen(true)}
+                    className="text-xs gap-1.5 bg-amber-600 hover:bg-amber-700 text-white dark:bg-amber-700 dark:hover:bg-amber-600"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    Ask Scripture Guide
+                  </Button>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="relative px-6 py-3 border-t border-border/30 flex items-center justify-between bg-background/40">
+                <div className="text-xs text-muted-foreground">
+                  Posted {new Date(story.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                </div>
+                {story.hashtag && (
+                  <span className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                    #{story.hashtag.replace("#", "")}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-
-          {/* Footer metadata */}
-          <div className="px-6 py-3 border-t border-border/30 flex items-center justify-between bg-background/40">
-            <div className="text-xs text-muted-foreground">
-              Posted {new Date(story.created_at).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
-            </div>
-            {story.hashtag && (
-              <span className="text-xs font-medium text-amber-700 dark:text-amber-400">
-                #{story.hashtag.replace("#", "")}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
+        </>
+      )}
 
       {/* Scripture Guide AI Chat */}
       <BibleAIChat
