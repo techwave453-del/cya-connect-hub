@@ -119,6 +119,7 @@ const Index = () => {
               <DailyBibleVerse />
               <DailyBibleStory />
             </div>
+            <BibleStoriesCarousel />
             <IdeasSection onShareIdea={handleShareIdea} />
             
             <div className="px-4 py-4 space-y-4">
