@@ -215,8 +215,9 @@ const Index = () => {
         )}
       </main>
       
+      <DailyBibleStory />
       <FloatingActionButton />
-     <BibleAIButton />
+      <BibleAIButton />
 
       {/* Create Post Dialog */}
       {user && profile && (
