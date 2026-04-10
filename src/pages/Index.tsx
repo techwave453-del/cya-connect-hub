@@ -10,6 +10,7 @@ import FloatingActionButton from "@/components/FloatingActionButton";
 import CreatePostDialog from "@/components/CreatePostDialog";
 import DailyBibleVerse from "@/components/DailyBibleVerse";
 import DailyBibleStory from "@/components/DailyBibleStory";
+import BibleStoriesCarousel from "@/components/BibleStoriesCarousel";
 import { useAuth } from "@/hooks/useAuth";
 import { usePosts } from "@/hooks/usePosts";
 import { useTasks } from "@/hooks/useTasks";
