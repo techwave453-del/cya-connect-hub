@@ -386,6 +386,9 @@ const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: Bibl
         // Mark as failed to prevent infinite retry loop
         console.warn(`Story image generation failed (${resp.status}) for ${storyId}`);
         setFailedStoryImages(prev => new Set(prev).add(storyId));
+        if (resp.status === 402) {
+          toast({ title: "AI Credits", description: "Image generation is temporarily unavailable. Story will display without an image.", variant: "default" });
+        }
       }
     } catch (e) {
       console.error('Failed to generate story image:', e);
