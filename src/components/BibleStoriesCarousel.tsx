@@ -146,7 +146,7 @@ const BibleStoriesCarousel = () => {
         <Carousel
           setApi={setApi}
           opts={{ align: "start", loop: true }}
-          plugins={[Autoplay({ delay: 5000, stopOnInteraction: true, stopOnMouseEnter: true })]}
+          plugins={[Autoplay({ delay: 4000, stopOnInteraction: false, stopOnMouseEnter: true })]}
         >
           <CarouselContent className="-ml-4">
             {stories.map((story) => {
