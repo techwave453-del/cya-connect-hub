@@ -102,11 +102,13 @@ const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: Bibl
   // Prefill input when opened with an initial message and optionally auto-send
   useEffect(() => {
     if (isOpen && initialMessage) {
-      setInput(initialMessage);
       if (autoSend) {
+        // Send directly without showing the prompt in chat
         setTimeout(() => {
-          handleSend();
+          sendMessage(initialMessage, { suppressUser: true });
         }, 250);
+      } else {
+        setInput(initialMessage);
       }
     }
     // only run when isOpen or initialMessage changes
