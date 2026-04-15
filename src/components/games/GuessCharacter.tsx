@@ -8,6 +8,7 @@ import { useQuestionGenerator } from "@/hooks/useQuestionGenerator";
 import { useAnsweredQuestions } from "@/hooks/useAnsweredQuestions";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import { useAchievements } from "@/hooks/useAchievements";
 
 interface GuessCharacterProps {
   onGameEnd?: (score: number, streak: number) => void;
@@ -15,6 +16,7 @@ interface GuessCharacterProps {
 
 const GuessCharacter = ({ onGameEnd }: GuessCharacterProps) => {
   const { games, loading, isOnline, syncScore, getLocalProgress, saveLocalProgress, refetch } = useBibleGames('guess_character');
+  const { recordGamePlayed } = useAchievements();
   const { generateQuestions, isGenerating, shouldGenerate } = useQuestionGenerator();
   const { answeredIds, answeredCount, markAsAnswered, getUnansweredFirst, loading: answeredLoading } = useAnsweredQuestions('guess_character');
   
@@ -121,8 +123,8 @@ const GuessCharacter = ({ onGameEnd }: GuessCharacterProps) => {
         current_streak: streak
       });
       
-      // Sync to server if online
       await syncScore('guess_character', score, highestStreak);
+      await recordGamePlayed();
       
       // Generate new questions if online and eligible
       if (isOnline && shouldGenerate('guess_character')) {

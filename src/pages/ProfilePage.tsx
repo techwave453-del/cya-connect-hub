@@ -6,6 +6,9 @@ import Header from "@/components/Header";
 import PostCard from "@/components/PostCard";
 import EditProfileDialog from "@/components/EditProfileDialog";
 import BibleDownloadManager from "@/components/BibleDownloadManager";
+import AchievementsBadges from "@/components/AchievementsBadges";
+import StreakTracker from "@/components/StreakTracker";
+import { useAchievements } from "@/hooks/useAchievements";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Edit2, Loader2, User, Calendar, FileText, Church } from "lucide-react";
@@ -26,7 +29,8 @@ const ProfilePage = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const { user, profile: currentUserProfile } = useAuth();
-  
+  const { achievements, earnedAchievements, streaks, totalXP } = useAchievements();
+
   const [profile, setProfile] = useState<Profile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -234,6 +238,28 @@ const ProfilePage = () => {
           </div>
         </div>
       </div>
+
+      {/* Achievements & Streaks Section */}
+      {isOwnProfile && (
+        <div className="container pb-6 space-y-4">
+          <StreakTracker
+            loginStreak={streaks.current_login_streak}
+            gameStreak={streaks.current_game_streak}
+            totalXP={totalXP}
+          />
+          <div className="px-4">
+            <h2 className="font-heading text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+              <span className="text-2xl">🏆</span>
+              Achievements
+            </h2>
+            <AchievementsBadges
+              achievements={achievements}
+              earnedAchievements={earnedAchievements}
+              streaks={streaks}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Posts Section */}
       <div className="container pb-8">

@@ -8,6 +8,7 @@ import { useQuestionGenerator } from "@/hooks/useQuestionGenerator";
 import { useAnsweredQuestions } from "@/hooks/useAnsweredQuestions";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import { useAchievements } from "@/hooks/useAchievements";
 
 interface MemoryVerseProps {
   onGameEnd?: (score: number, streak: number) => void;
@@ -15,6 +16,7 @@ interface MemoryVerseProps {
 
 const MemoryVerse = ({ onGameEnd }: MemoryVerseProps) => {
   const { games, loading, isOnline, syncScore, getLocalProgress, saveLocalProgress, refetch } = useBibleGames('memory_verse');
+  const { recordGamePlayed } = useAchievements();
   const { generateQuestions, isGenerating, shouldGenerate } = useQuestionGenerator();
   const { answeredIds, answeredCount, markAsAnswered, getUnansweredFirst, loading: answeredLoading } = useAnsweredQuestions('memory_verse');
   
@@ -147,8 +149,8 @@ const MemoryVerse = ({ onGameEnd }: MemoryVerseProps) => {
         current_streak: streak
       });
       
-      // Sync to server if online
       await syncScore('memory_verse', score, highestStreak);
+      await recordGamePlayed();
       
       // Generate new questions if online and eligible
       if (isOnline && shouldGenerate('memory_verse')) {

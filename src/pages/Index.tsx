@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import TabNavigation from "@/components/TabNavigation";
 import IdeasSection from "@/components/IdeasSection";
@@ -11,6 +11,8 @@ import CreatePostDialog from "@/components/CreatePostDialog";
 import DailyBibleVerse from "@/components/DailyBibleVerse";
 import DailyBibleStory from "@/components/DailyBibleStory";
 import BibleStoriesCarousel from "@/components/BibleStoriesCarousel";
+import StreakTracker from "@/components/StreakTracker";
+import { useAchievements } from "@/hooks/useAchievements";
 import { useAuth } from "@/hooks/useAuth";
 import { usePosts } from "@/hooks/usePosts";
 import { useTasks } from "@/hooks/useTasks";
@@ -27,7 +29,15 @@ const Index = () => {
   const { posts, loading: postsLoading, refetch, deletePost, updatePost, isOnline } = usePosts();
   const { tasks, loading: tasksLoading } = useTasks();
   const { activities, loading: activitiesLoading } = useActivities();
+  const { streaks, totalXP, recordLogin } = useAchievements();
   const navigate = useNavigate();
+
+  // Record daily login for authenticated users
+  useEffect(() => {
+    if (isAuthenticated) {
+      recordLogin();
+    }
+  }, [isAuthenticated]);
 
   const handleShareIdea = () => {
     if (!isAuthenticated) {
@@ -118,6 +128,13 @@ const Index = () => {
             <div className="px-4 pt-4">
               <DailyBibleVerse />
             </div>
+            {isAuthenticated && (
+              <StreakTracker
+                loginStreak={streaks.current_login_streak}
+                gameStreak={streaks.current_game_streak}
+                totalXP={totalXP}
+              />
+            )}
             <BibleStoriesCarousel />
             <IdeasSection onShareIdea={handleShareIdea} />
             

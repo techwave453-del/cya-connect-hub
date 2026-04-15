@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { useBibleGames, BibleGame } from "@/hooks/useBibleGames";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import { useAchievements } from "@/hooks/useAchievements";
 
 interface DailyChallengeProps {
   onGameEnd?: (score: number, streak: number) => void;
@@ -28,6 +29,7 @@ const seededRandom = (seed: string, index: number) => {
 
 const DailyChallenge = ({ onGameEnd }: DailyChallengeProps) => {
   const { games, loading, isOnline, syncScore, getLocalProgress, saveLocalProgress } = useBibleGames();
+  const { recordGamePlayed } = useAchievements();
   
   const [challengeGames, setChallengeGames] = useState<BibleGame[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -163,8 +165,8 @@ const DailyChallenge = ({ onGameEnd }: DailyChallengeProps) => {
         current_streak: streak
       });
       
-      // Sync to server if online
       await syncScore('daily_challenge', score, highestStreak);
+      await recordGamePlayed();
       
       onGameEnd?.(score, highestStreak);
     } else {
