@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          category: string
+          created_at: string
+          criteria_type: string
+          criteria_value: number
+          description: string
+          icon: string
+          id: string
+          key: string
+          points: number
+          title: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          criteria_type: string
+          criteria_value?: number
+          description: string
+          icon?: string
+          id?: string
+          key: string
+          points?: number
+          title: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          criteria_type?: string
+          criteria_value?: number
+          description?: string
+          icon?: string
+          id?: string
+          key?: string
+          points?: number
+          title?: string
+        }
+        Relationships: []
+      }
       activities: {
         Row: {
           attendees: number
@@ -531,6 +570,35 @@ export type Database = {
         }
         Relationships: []
       }
+      user_achievements: {
+        Row: {
+          achievement_id: string
+          earned_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          achievement_id: string
+          earned_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string
+          earned_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_achievements_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_answered_questions: {
         Row: {
           answered_at: string
@@ -580,6 +648,48 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_streaks: {
+        Row: {
+          current_game_streak: number
+          current_login_streak: number
+          id: string
+          last_game_date: string | null
+          last_login_date: string | null
+          longest_game_streak: number
+          longest_login_streak: number
+          total_games_played: number
+          total_logins: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          current_game_streak?: number
+          current_login_streak?: number
+          id?: string
+          last_game_date?: string | null
+          last_login_date?: string | null
+          longest_game_streak?: number
+          longest_login_streak?: number
+          total_games_played?: number
+          total_logins?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          current_game_streak?: number
+          current_login_streak?: number
+          id?: string
+          last_game_date?: string | null
+          last_login_date?: string | null
+          longest_game_streak?: number
+          longest_login_streak?: number
+          total_games_played?: number
+          total_logins?: number
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
