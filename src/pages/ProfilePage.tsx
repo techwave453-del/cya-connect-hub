@@ -29,7 +29,8 @@ const ProfilePage = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const { user, profile: currentUserProfile } = useAuth();
-  
+  const { achievements, earnedAchievements, streaks, totalXP } = useAchievements();
+
   const [profile, setProfile] = useState<Profile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
