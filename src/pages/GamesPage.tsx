@@ -126,6 +126,18 @@ const GamesPage = () => {
           <Gamepad2 className="w-10 h-10 text-primary mb-2" />
           <h1 className="text-2xl font-bold">Bible Games</h1>
           <p className="text-sm text-muted-foreground">Learn Scripture through fun!</p>
+          <div className="flex items-center gap-4 mt-1">
+            <div className="flex items-center gap-1 text-xs">
+              <Flame className="w-3.5 h-3.5 text-orange-500" />
+              <span className="font-semibold text-foreground">{streaks.current_game_streak}</span>
+              <span className="text-muted-foreground">streak</span>
+            </div>
+            <div className="flex items-center gap-1 text-xs">
+              <Trophy className="w-3.5 h-3.5 text-yellow-500" />
+              <span className="font-semibold text-foreground">{totalXP}</span>
+              <span className="text-muted-foreground">XP</span>
+            </div>
+          </div>
         </div>
       </div>
 
