@@ -239,6 +239,28 @@ const ProfilePage = () => {
         </div>
       </div>
 
+      {/* Achievements & Streaks Section */}
+      {isOwnProfile && (
+        <div className="container pb-6 space-y-4">
+          <StreakTracker
+            loginStreak={streaks.current_login_streak}
+            gameStreak={streaks.current_game_streak}
+            totalXP={totalXP}
+          />
+          <div className="px-4">
+            <h2 className="font-heading text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+              <span className="text-2xl">🏆</span>
+              Achievements
+            </h2>
+            <AchievementsBadges
+              achievements={achievements}
+              earnedAchievements={earnedAchievements}
+              streaks={streaks}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Posts Section */}
       <div className="container pb-8">
         <h2 className="font-heading text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
