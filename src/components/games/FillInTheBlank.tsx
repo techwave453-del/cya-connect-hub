@@ -17,6 +17,7 @@ interface FillInTheBlankProps {
 
 const FillInTheBlank = ({ onGameEnd }: FillInTheBlankProps) => {
   const { games, loading, isOnline, syncScore, getLocalProgress, saveLocalProgress, refetch } = useBibleGames('fill_blank');
+  const { recordGamePlayed } = useAchievements();
   const { generateQuestions, isGenerating, shouldGenerate } = useQuestionGenerator();
   const { answeredIds, answeredCount, markAsAnswered, getUnansweredFirst, loading: answeredLoading } = useAnsweredQuestions('fill_blank');
   

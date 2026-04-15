@@ -29,6 +29,7 @@ const seededRandom = (seed: string, index: number) => {
 
 const DailyChallenge = ({ onGameEnd }: DailyChallengeProps) => {
   const { games, loading, isOnline, syncScore, getLocalProgress, saveLocalProgress } = useBibleGames();
+  const { recordGamePlayed } = useAchievements();
   
   const [challengeGames, setChallengeGames] = useState<BibleGame[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);

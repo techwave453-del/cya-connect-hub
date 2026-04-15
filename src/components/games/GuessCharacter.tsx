@@ -16,6 +16,7 @@ interface GuessCharacterProps {
 
 const GuessCharacter = ({ onGameEnd }: GuessCharacterProps) => {
   const { games, loading, isOnline, syncScore, getLocalProgress, saveLocalProgress, refetch } = useBibleGames('guess_character');
+  const { recordGamePlayed } = useAchievements();
   const { generateQuestions, isGenerating, shouldGenerate } = useQuestionGenerator();
   const { answeredIds, answeredCount, markAsAnswered, getUnansweredFirst, loading: answeredLoading } = useAnsweredQuestions('guess_character');
   

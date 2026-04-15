@@ -100,6 +100,7 @@ const TestamentChallenge = ({
   onGameEnd,
 }: TestamentChallengeProps) => {
   const { games, loading, isOnline, syncScore, getLocalProgress, saveLocalProgress } = useBibleGames();
+  const { recordGamePlayed } = useAchievements();
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);

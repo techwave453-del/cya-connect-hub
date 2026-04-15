@@ -16,6 +16,7 @@ interface MemoryVerseProps {
 
 const MemoryVerse = ({ onGameEnd }: MemoryVerseProps) => {
   const { games, loading, isOnline, syncScore, getLocalProgress, saveLocalProgress, refetch } = useBibleGames('memory_verse');
+  const { recordGamePlayed } = useAchievements();
   const { generateQuestions, isGenerating, shouldGenerate } = useQuestionGenerator();
   const { answeredIds, answeredCount, markAsAnswered, getUnansweredFirst, loading: answeredLoading } = useAnsweredQuestions('memory_verse');
   
