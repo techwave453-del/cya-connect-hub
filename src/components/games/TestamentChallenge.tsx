@@ -169,6 +169,7 @@ const TestamentChallenge = ({
         current_streak: streak,
       });
       await syncScore(scoreKey, score, highestStreak);
+      await recordGamePlayed();
       onGameEnd?.(score, highestStreak);
       return;
     }

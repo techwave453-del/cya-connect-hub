@@ -149,8 +149,8 @@ const MemoryVerse = ({ onGameEnd }: MemoryVerseProps) => {
         current_streak: streak
       });
       
-      // Sync to server if online
       await syncScore('memory_verse', score, highestStreak);
+      await recordGamePlayed();
       
       // Generate new questions if online and eligible
       if (isOnline && shouldGenerate('memory_verse')) {

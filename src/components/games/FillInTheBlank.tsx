@@ -119,8 +119,8 @@ const FillInTheBlank = ({ onGameEnd }: FillInTheBlankProps) => {
         current_streak: streak
       });
       
-      // Sync to server if online
       await syncScore('fill_blank', score, highestStreak);
+      await recordGamePlayed();
       
       // Generate new questions if online and eligible
       if (isOnline && shouldGenerate('fill_blank')) {

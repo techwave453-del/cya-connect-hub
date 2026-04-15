@@ -165,8 +165,8 @@ const DailyChallenge = ({ onGameEnd }: DailyChallengeProps) => {
         current_streak: streak
       });
       
-      // Sync to server if online
       await syncScore('daily_challenge', score, highestStreak);
+      await recordGamePlayed();
       
       onGameEnd?.(score, highestStreak);
     } else {

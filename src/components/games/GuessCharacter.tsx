@@ -123,8 +123,8 @@ const GuessCharacter = ({ onGameEnd }: GuessCharacterProps) => {
         current_streak: streak
       });
       
-      // Sync to server if online
       await syncScore('guess_character', score, highestStreak);
+      await recordGamePlayed();
       
       // Generate new questions if online and eligible
       if (isOnline && shouldGenerate('guess_character')) {
