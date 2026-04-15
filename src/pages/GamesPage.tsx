@@ -17,7 +17,9 @@ import FloatingLeaderboard from "@/components/games/FloatingLeaderboard";
 import MultiplayerMode from "@/components/games/multiplayer/MultiplayerMode";
 import { useOffline } from "@/contexts/OfflineContext";
 import { useNewQuestionsCount } from "@/hooks/useNewQuestionsCount";
+import { useAchievements } from "@/hooks/useAchievements";
 import { supabase } from "@/integrations/supabase/client";
+import { Flame, Trophy } from "lucide-react";
 
 type GameType =
   | 'trivia'
@@ -37,6 +39,7 @@ const GamesPage = () => {
   const { isOnline } = useOffline();
   const navigate = useNavigate();
   const { markAsSeen } = useNewQuestionsCount();
+  const { streaks, totalXP } = useAchievements();
 
   // Mark questions as seen when visiting the games page
   useEffect(() => {
