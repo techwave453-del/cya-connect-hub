@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import TabNavigation from "@/components/TabNavigation";
 import IdeasSection from "@/components/IdeasSection";
@@ -33,11 +33,11 @@ const Index = () => {
   const navigate = useNavigate();
 
   // Record daily login for authenticated users
-  useState(() => {
+  useEffect(() => {
     if (isAuthenticated) {
       recordLogin();
     }
-  });
+  }, [isAuthenticated]);
 
   const handleShareIdea = () => {
     if (!isAuthenticated) {
