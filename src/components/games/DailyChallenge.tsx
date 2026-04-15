@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { useBibleGames, BibleGame } from "@/hooks/useBibleGames";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import { useAchievements } from "@/hooks/useAchievements";
 
 interface DailyChallengeProps {
   onGameEnd?: (score: number, streak: number) => void;

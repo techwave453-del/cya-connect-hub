@@ -16,6 +16,7 @@ interface BibleTriviaProps {
 
 const BibleTrivia = ({ onGameEnd }: BibleTriviaProps) => {
   const { games, loading, isOnline, syncScore, getLocalProgress, saveLocalProgress, refetch } = useBibleGames('trivia');
+  const { recordGamePlayed } = useAchievements();
   const { generateQuestions, isGenerating, shouldGenerate } = useQuestionGenerator();
   const { answeredIds, answeredCount, markAsAnswered, getUnansweredFirst, loading: answeredLoading } = useAnsweredQuestions('trivia');
   
@@ -102,8 +103,8 @@ const BibleTrivia = ({ onGameEnd }: BibleTriviaProps) => {
         current_streak: streak
       });
       
-      // Sync to server if online
       await syncScore('trivia', score, highestStreak);
+      await recordGamePlayed();
       
       // Generate new questions if online and eligible
       if (isOnline && shouldGenerate('trivia')) {

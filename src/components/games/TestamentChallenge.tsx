@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useBibleGames, BibleGame } from "@/hooks/useBibleGames";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import { useAchievements } from "@/hooks/useAchievements";
 
 interface TestamentChallengeProps {
   testament: "old" | "new";

@@ -9,6 +9,7 @@ import { useQuestionGenerator } from "@/hooks/useQuestionGenerator";
 import { useAnsweredQuestions } from "@/hooks/useAnsweredQuestions";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import { useAchievements } from "@/hooks/useAchievements";
 
 interface FillInTheBlankProps {
   onGameEnd?: (score: number, streak: number) => void;
