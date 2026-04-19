@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { initSyncListener, syncWithServer } from "./lib/syncManager";
+import { requestPersistentStorage } from "./lib/offlineDb";
 // @ts-ignore - virtual module provided by vite-plugin-pwa
 import { registerSW } from "virtual:pwa-register";
 
@@ -29,4 +30,8 @@ if ("serviceWorker" in navigator) {
 // Initialize sync listener for online/offline events
 initSyncListener();
 
+// Ask the browser to keep our offline data even under storage pressure
+void requestPersistentStorage().catch(() => { /* non-fatal */ });
+
 createRoot(document.getElementById("root")!).render(<App />);
+
