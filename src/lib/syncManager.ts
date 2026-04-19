@@ -64,24 +64,30 @@ export const syncWithServer = async (): Promise<{ success: boolean; synced: numb
 
       try {
         const tableName = item.table as TableName;
-        const itemData = item.data as { id?: string };
+        const itemData = item.data as { id?: string; user_id?: string };
         const itemId = itemData.id || '';
 
         await retryWithBackoff(async () => {
           let result: { error: { message?: string; code?: string } | null } | undefined;
 
-          switch (item.action) {
-            case 'insert':
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              result = await supabase.from(tableName).insert(item.data as any);
-              break;
-            case 'update':
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              result = await supabase.from(tableName).update(item.data as any).eq('id', itemId);
-              break;
-            case 'delete':
-              result = await supabase.from(tableName).delete().eq('id', itemId);
-              break;
+          // user_streaks is keyed by user_id and should always upsert
+          if (tableName === 'user_streaks') {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            result = await supabase.from('user_streaks').upsert(item.data as any, { onConflict: 'user_id' });
+          } else {
+            switch (item.action) {
+              case 'insert':
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                result = await supabase.from(tableName).insert(item.data as any);
+                break;
+              case 'update':
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                result = await supabase.from(tableName).update(item.data as any).eq('id', itemId);
+                break;
+              case 'delete':
+                result = await supabase.from(tableName).delete().eq('id', itemId);
+                break;
+            }
           }
 
           if (result?.error) {
