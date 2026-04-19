@@ -250,7 +250,7 @@ export const getById = async <T>(storeName: string, id: string): Promise<T | und
   });
 };
 
-export const put = async <T extends { id: string }>(storeName: string, data: T): Promise<void> => {
+export const put = async <T extends object>(storeName: string, data: T): Promise<void> => {
   const database = await openDB();
   return new Promise((resolve, reject) => {
     const transaction = database.transaction(storeName, 'readwrite');
@@ -262,7 +262,7 @@ export const put = async <T extends { id: string }>(storeName: string, data: T):
   });
 };
 
-export const putAll = async <T extends { id: string }>(storeName: string, items: T[]): Promise<void> => {
+export const putAll = async <T extends object>(storeName: string, items: T[]): Promise<void> => {
   const database = await openDB();
   return new Promise((resolve, reject) => {
     const transaction = database.transaction(storeName, 'readwrite');
