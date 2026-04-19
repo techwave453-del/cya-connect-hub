@@ -1,7 +1,17 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getSyncQueue, removeSyncQueueItem, setMetadata, getMetadata, pruneSyncQueue, markSyncQueueItemFailed } from "./offlineDb";
 
-type TableName = 'posts' | 'post_comments' | 'post_likes' | 'tasks' | 'activities';
+type TableName =
+  | 'posts'
+  | 'post_comments'
+  | 'post_likes'
+  | 'tasks'
+  | 'activities'
+  | 'user_streaks'
+  | 'user_achievements'
+  | 'messages'
+  | 'conversations'
+  | 'game_scores';
 const MAX_RETRIES = 5;
 const RETRY_DELAY = 1000;
 
