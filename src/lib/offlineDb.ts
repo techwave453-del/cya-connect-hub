@@ -1,6 +1,6 @@
 // IndexedDB wrapper for offline data storage
 const DB_NAME = 'cya-offline-db';
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 const MAX_SYNC_QUEUE_AGE = 30 * 24 * 60 * 60 * 1000; // 30 days
 const MAX_STORE_SIZE = 50 * 1024 * 1024; // 50 MB
 
@@ -180,6 +180,48 @@ const openDB = (): Promise<IDBDatabase> => {
       if (!database.objectStoreNames.contains('metadata')) {
         database.createObjectStore('metadata', { keyPath: 'key' });
       }
+
+      // ===== v6 stores: full-feature offline =====
+      // Achievements catalog
+      if (!database.objectStoreNames.contains('achievements')) {
+        database.createObjectStore('achievements', { keyPath: 'id' });
+      }
+
+      // Per-user earned achievements
+      if (!database.objectStoreNames.contains('user_achievements')) {
+        database.createObjectStore('user_achievements', { keyPath: 'id' });
+      }
+
+      // Per-user streaks (single row per user, keyed by user_id)
+      if (!database.objectStoreNames.contains('user_streaks')) {
+        database.createObjectStore('user_streaks', { keyPath: 'user_id' });
+      }
+
+      // App settings (themes, daily story selection, etc.)
+      if (!database.objectStoreNames.contains('app_settings')) {
+        database.createObjectStore('app_settings', { keyPath: 'id' });
+      }
+
+      // Saved Bible chats
+      if (!database.objectStoreNames.contains('saved_bible_chats')) {
+        database.createObjectStore('saved_bible_chats', { keyPath: 'id' });
+      }
+
+      // Chat conversations
+      if (!database.objectStoreNames.contains('conversations')) {
+        database.createObjectStore('conversations', { keyPath: 'id' });
+      }
+
+      // Chat messages (keyed by id, indexed by conversation)
+      if (!database.objectStoreNames.contains('messages')) {
+        const messagesStore = database.createObjectStore('messages', { keyPath: 'id' });
+        messagesStore.createIndex('conversation_id', 'conversation_id', { unique: false });
+      }
+
+      // Game scores
+      if (!database.objectStoreNames.contains('game_scores')) {
+        database.createObjectStore('game_scores', { keyPath: 'id' });
+      }
     };
   });
 };
@@ -208,7 +250,7 @@ export const getById = async <T>(storeName: string, id: string): Promise<T | und
   });
 };
 
-export const put = async <T extends { id: string }>(storeName: string, data: T): Promise<void> => {
+export const put = async <T extends object>(storeName: string, data: T): Promise<void> => {
   const database = await openDB();
   return new Promise((resolve, reject) => {
     const transaction = database.transaction(storeName, 'readwrite');
@@ -220,7 +262,7 @@ export const put = async <T extends { id: string }>(storeName: string, data: T):
   });
 };
 
-export const putAll = async <T extends { id: string }>(storeName: string, items: T[]): Promise<void> => {
+export const putAll = async <T extends object>(storeName: string, items: T[]): Promise<void> => {
   const database = await openDB();
   return new Promise((resolve, reject) => {
     const transaction = database.transaction(storeName, 'readwrite');

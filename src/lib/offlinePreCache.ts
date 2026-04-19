@@ -38,7 +38,11 @@ export const runPreCache = async (): Promise<PreCacheResult[]> => {
   console.log("[PreCache] Starting smart pre-cache…");
   const results: PreCacheResult[] = [];
 
-  const tasks = [
+  // Get current user for user-scoped caches
+  const { data: sessionData } = await supabase.auth.getSession();
+  const userId = sessionData.session?.user?.id;
+
+  const tasks: Array<{ table: string; fetch: () => Promise<{ id: string }[]> }> = [
     {
       table: "posts",
       fetch: async () => {
@@ -106,7 +110,136 @@ export const runPreCache = async (): Promise<PreCacheResult[]> => {
         return data || [];
       },
     },
+    {
+      table: "achievements",
+      fetch: async () => {
+        const { data, error } = await supabase.from("achievements").select("*");
+        if (error) throw error;
+        return data || [];
+      },
+    },
+    {
+      table: "app_settings",
+      fetch: async () => {
+        const { data, error } = await supabase.from("app_settings").select("*");
+        if (error) throw error;
+        return data || [];
+      },
+    },
+    {
+      table: "post_comments",
+      fetch: async () => {
+        const { data, error } = await supabase
+          .from("post_comments")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(500);
+        if (error) throw error;
+        return data || [];
+      },
+    },
+    {
+      table: "post_likes",
+      fetch: async () => {
+        const { data, error } = await supabase
+          .from("post_likes")
+          .select("*")
+          .limit(1000);
+        if (error) throw error;
+        return data || [];
+      },
+    },
   ];
+
+  // User-scoped caches
+  if (userId) {
+    tasks.push(
+      {
+        table: "user_achievements",
+        fetch: async () => {
+          const { data, error } = await supabase
+            .from("user_achievements")
+            .select("*")
+            .eq("user_id", userId);
+          if (error) throw error;
+          return data || [];
+        },
+      },
+      {
+        table: "user_streaks",
+        fetch: async () => {
+          const { data, error } = await supabase
+            .from("user_streaks")
+            .select("*")
+            .eq("user_id", userId);
+          if (error) throw error;
+          return data || [];
+        },
+      },
+      {
+        table: "saved_bible_chats",
+        fetch: async () => {
+          const { data, error } = await supabase
+            .from("saved_bible_chats")
+            .select("*")
+            .eq("user_id", userId)
+            .order("updated_at", { ascending: false })
+            .limit(50);
+          if (error) throw error;
+          return data || [];
+        },
+      },
+      {
+        table: "conversations",
+        fetch: async () => {
+          // Get user's conversations
+          const { data: parts } = await supabase
+            .from("conversation_participants")
+            .select("conversation_id")
+            .eq("user_id", userId);
+          const ids = (parts || []).map((p) => p.conversation_id);
+          if (ids.length === 0) return [];
+          const { data, error } = await supabase
+            .from("conversations")
+            .select("*")
+            .in("id", ids);
+          if (error) throw error;
+          return data || [];
+        },
+      },
+      {
+        table: "messages",
+        fetch: async () => {
+          // Get user's conversations and recent messages
+          const { data: parts } = await supabase
+            .from("conversation_participants")
+            .select("conversation_id")
+            .eq("user_id", userId);
+          const ids = (parts || []).map((p) => p.conversation_id);
+          if (ids.length === 0) return [];
+          const { data, error } = await supabase
+            .from("messages")
+            .select("*")
+            .in("conversation_id", ids)
+            .order("created_at", { ascending: false })
+            .limit(500);
+          if (error) throw error;
+          return data || [];
+        },
+      },
+      {
+        table: "game_scores",
+        fetch: async () => {
+          const { data, error } = await supabase
+            .from("game_scores")
+            .select("*")
+            .eq("user_id", userId);
+          if (error) throw error;
+          return data || [];
+        },
+      }
+    );
+  }
 
   // Run all fetches in parallel
   const settled = await Promise.allSettled(

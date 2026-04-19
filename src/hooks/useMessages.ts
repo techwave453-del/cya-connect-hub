@@ -1,5 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getAll, putAll, put, addToSyncQueue } from "@/lib/offlineDb";
+import { useOnlineStatus } from "./useOnlineStatus";
 
 export interface Message {
   id: string;
@@ -11,14 +13,54 @@ export interface Message {
     username: string;
     avatar_url: string | null;
   };
+  pending?: boolean;
+}
+
+interface CachedProfile {
+  id?: string;
+  user_id: string;
+  username: string;
+  avatar_url: string | null;
 }
 
 export const useMessages = (conversationId: string | undefined) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const isOnline = useOnlineStatus();
 
-  const fetchMessages = async () => {
+  const decorateWithSenders = useCallback(async (msgs: Message[]): Promise<Message[]> => {
+    try {
+      const profiles = await getAll<CachedProfile>("profiles");
+      const map = new Map(profiles.map((p) => [p.user_id, p]));
+      return msgs.map((m) => {
+        const p = map.get(m.sender_id);
+        return p ? { ...m, sender: { username: p.username, avatar_url: p.avatar_url } } : m;
+      });
+    } catch {
+      return msgs;
+    }
+  }, []);
+
+  const fetchMessages = useCallback(async () => {
     if (!conversationId) {
+      setLoading(false);
+      return;
+    }
+
+    // 1. Cache-first
+    try {
+      const all = await getAll<Message>("messages");
+      const cached = all
+        .filter((m) => m.conversation_id === conversationId)
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      if (cached.length > 0) {
+        const decorated = await decorateWithSenders(cached);
+        setMessages(decorated);
+        setLoading(false);
+      }
+    } catch { /* ignore */ }
+
+    if (!isOnline) {
       setLoading(false);
       return;
     }
@@ -52,20 +94,26 @@ export const useMessages = (conversationId: string | undefined) => {
       });
 
       setMessages(messagesWithSenders);
+
+      // Cache for offline
+      try {
+        if (data) await putAll("messages", data as { id: string }[]);
+        if (profiles) await putAll("profiles", profiles.map((p) => ({ ...p, id: p.user_id })));
+      } catch { /* ignore */ }
     } catch (error) {
       console.error("Error fetching messages:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [conversationId, isOnline, decorateWithSenders]);
 
   useEffect(() => {
     fetchMessages();
-  }, [conversationId]);
+  }, [fetchMessages]);
 
-  // Subscribe to real-time messages (INSERT and DELETE)
+  // Subscribe to real-time messages (INSERT and DELETE) — online only
   useEffect(() => {
-    if (!conversationId) return;
+    if (!conversationId || !isOnline) return;
 
     const channel = supabase
       .channel(`messages-${conversationId}`)
@@ -79,8 +127,7 @@ export const useMessages = (conversationId: string | undefined) => {
         },
         async (payload) => {
           const newMessage = payload.new as Message;
-          
-          // Get sender profile
+
           const { data: profile } = await supabase
             .from("profiles")
             .select("user_id, username, avatar_url")
@@ -94,7 +141,12 @@ export const useMessages = (conversationId: string | undefined) => {
               : undefined,
           };
 
-          setMessages((prev) => [...prev, messageWithSender]);
+          setMessages((prev) => {
+            // dedupe by id
+            if (prev.some((m) => m.id === messageWithSender.id)) return prev;
+            return [...prev, messageWithSender];
+          });
+          try { await put("messages", newMessage as { id: string }); } catch { /* ignore */ }
         }
       )
       .on(
@@ -115,19 +167,61 @@ export const useMessages = (conversationId: string | undefined) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [conversationId]);
+  }, [conversationId, isOnline]);
 
   const sendMessage = async (content: string, senderId: string) => {
     if (!conversationId || !content.trim()) return;
 
-    const { data, error } = await supabase.from("messages").insert({
+    const newMsg: Message = {
+      id: crypto.randomUUID(),
       conversation_id: conversationId,
       sender_id: senderId,
       content: content.trim(),
-    }).select().single();
+      created_at: new Date().toISOString(),
+      pending: !isOnline,
+    };
+
+    // Optimistic update + cache
+    setMessages((prev) => [...prev, newMsg]);
+    try { await put("messages", newMsg as unknown as { id: string }); } catch { /* ignore */ }
+
+    if (!isOnline) {
+      await addToSyncQueue({
+        table: "messages",
+        action: "insert",
+        data: {
+          id: newMsg.id,
+          conversation_id: conversationId,
+          sender_id: senderId,
+          content: newMsg.content,
+        },
+      });
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("messages")
+      .insert({
+        conversation_id: conversationId,
+        sender_id: senderId,
+        content: content.trim(),
+      })
+      .select()
+      .single();
 
     if (error) {
       console.error("Error sending message:", error);
+      // Queue for retry
+      await addToSyncQueue({
+        table: "messages",
+        action: "insert",
+        data: {
+          id: newMsg.id,
+          conversation_id: conversationId,
+          sender_id: senderId,
+          content: newMsg.content,
+        },
+      });
       throw error;
     }
 
@@ -139,7 +233,7 @@ export const useMessages = (conversationId: string | undefined) => {
 
     // Trigger push notification for other participants
     if (data) {
-      supabase.functions.invoke('notify-new-message', {
+      supabase.functions.invoke("notify-new-message", {
         body: {
           messageId: data.id,
           conversationId: conversationId,
@@ -147,7 +241,7 @@ export const useMessages = (conversationId: string | undefined) => {
           content: content.trim(),
         },
       }).catch((err) => {
-        console.error('Error triggering push notification:', err);
+        console.error("Error triggering push notification:", err);
       });
     }
   };
