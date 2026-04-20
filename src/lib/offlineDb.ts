@@ -1,6 +1,6 @@
 // IndexedDB wrapper for offline data storage
 const DB_NAME = 'cya-offline-db';
-const DB_VERSION = 6;
+const DB_VERSION = 7;
 const MAX_SYNC_QUEUE_AGE = 30 * 24 * 60 * 60 * 1000; // 30 days
 const MAX_STORE_SIZE = 50 * 1024 * 1024; // 50 MB
 
