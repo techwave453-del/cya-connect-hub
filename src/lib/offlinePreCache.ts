@@ -4,6 +4,7 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import { putAll, setMetadata, getMetadata } from "./offlineDb";
+import { precacheStoryImages } from "./imageCache";
 
 const PRECACHE_INTERVAL = 15 * 60 * 1000; // 15 minutes
 const PRECACHE_KEY = "precache:lastRun";
