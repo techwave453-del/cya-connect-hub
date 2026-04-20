@@ -56,6 +56,23 @@ export const runPreCache = async (): Promise<PreCacheResult[]> => {
       },
     },
     {
+      table: "daily_stories",
+      fetch: async () => {
+        // Pre-cache last 30 days of Daily Bible Stories so users can scroll offline
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const { data, error } = await supabase
+          .from("posts")
+          .select("*")
+          .eq("hashtag", "#DailyBibleStory")
+          .gte("created_at", thirtyDaysAgo.toISOString())
+          .order("created_at", { ascending: false })
+          .limit(30);
+        if (error) throw error;
+        return data || [];
+      },
+    },
+    {
       table: "tasks",
       fetch: async () => {
         const { data, error } = await supabase
