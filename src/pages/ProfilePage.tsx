@@ -304,7 +304,8 @@ const ProfilePage = () => {
 
       {/* Offline Bible & AI Manager */}
       {isOwnProfile && (
-        <div className="container pb-8">
+        <div className="container pb-8 space-y-4">
+          <StorageUsagePanel />
           <BibleDownloadManager />
         </div>
       )}
