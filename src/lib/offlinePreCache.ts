@@ -4,6 +4,7 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import { putAll, setMetadata, getMetadata } from "./offlineDb";
+import { precacheStoryImages } from "./imageCache";
 
 const PRECACHE_INTERVAL = 15 * 60 * 1000; // 15 minutes
 const PRECACHE_KEY = "precache:lastRun";
@@ -277,6 +278,26 @@ export const runPreCache = async (): Promise<PreCacheResult[]> => {
     if (s.status === "fulfilled") {
       results.push(s.value);
     }
+  }
+
+  // Pre-cache Daily Bible Story images so they render instantly offline
+  try {
+    const storyResult = results.find((r) => r.table === "daily_stories");
+    if (storyResult && storyResult.cached > 0) {
+      const storyTask = tasks.find((t) => t.table === "daily_stories");
+      if (storyTask) {
+        const stories = (await storyTask.fetch()) as Array<{ title?: string | null; image_url?: string | null }>;
+        const imgPayload = stories
+          .filter((s) => !!s.image_url)
+          .map((s) => ({ title: s.title || "story", image: s.image_url as string }));
+        if (imgPayload.length > 0) {
+          const imgRes = await precacheStoryImages(imgPayload);
+          console.log(`[PreCache] Story images: ${imgRes.cached} cached, ${imgRes.failed} failed`);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("[PreCache] Story image pre-caching failed:", err);
   }
 
   await setMetadata(PRECACHE_KEY, Date.now());
