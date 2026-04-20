@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { getAll, putAll } from "@/lib/offlineDb";
 import Autoplay from "embla-carousel-autoplay";
 import {
   Carousel,
@@ -22,6 +23,8 @@ interface StorySnippet {
   created_at: string;
 }
 
+const STORIES_STORE = "daily_stories";
+
 const BibleStoriesCarousel = () => {
   const [stories, setStories] = useState<StorySnippet[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,22 +35,50 @@ const BibleStoriesCarousel = () => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [aiChat, setAiChat] = useState<{ open: boolean; title: string }>({ open: false, title: "" });
 
-  const fetchStories = useCallback(async () => {
-    if (!isOnline) { setLoading(false); return; }
+  const loadFromCache = useCallback(async () => {
     try {
+      const cached = await getAll<StorySnippet & { created_at: string }>(STORIES_STORE);
+      if (cached.length > 0) {
+        const sorted = [...cached].sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        setStories(sorted);
+        setLoading(false);
+      }
+    } catch (err) {
+      console.log("[BibleStories] cache read failed:", err);
+    }
+  }, []);
+
+  const fetchStories = useCallback(async () => {
+    // Always show cached stories first for instant render (offline-first)
+    await loadFromCache();
+
+    if (!isOnline) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       const { data } = await supabase
         .from("posts")
         .select("id, title, description, image_url, created_at")
         .eq("hashtag", "#DailyBibleStory")
+        .gte("created_at", thirtyDaysAgo.toISOString())
         .order("created_at", { ascending: false })
-        .limit(20);
-      if (data) setStories(data);
+        .limit(30);
+      if (data && data.length > 0) {
+        setStories(data);
+        try { await putAll(STORIES_STORE, data); } catch (e) { console.log("[BibleStories] cache write failed:", e); }
+      }
     } catch (err) {
       console.error("Failed to fetch stories:", err);
     } finally {
       setLoading(false);
     }
-  }, [isOnline]);
+  }, [isOnline, loadFromCache]);
 
   useEffect(() => { fetchStories(); }, [fetchStories]);
 
