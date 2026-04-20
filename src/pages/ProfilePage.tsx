@@ -8,6 +8,7 @@ import EditProfileDialog from "@/components/EditProfileDialog";
 import BibleDownloadManager from "@/components/BibleDownloadManager";
 import AchievementsBadges from "@/components/AchievementsBadges";
 import StreakTracker from "@/components/StreakTracker";
+import StorageUsagePanel from "@/components/StorageUsagePanel";
 import { useAchievements } from "@/hooks/useAchievements";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
