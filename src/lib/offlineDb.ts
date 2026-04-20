@@ -127,9 +127,15 @@ const openDB = (): Promise<IDBDatabase> => {
         database.createObjectStore('bible_passages', { keyPath: 'id' });
       }
 
-      // Store for daily_story
+      // Store for daily_story (single most-recent / featured)
       if (!database.objectStoreNames.contains('daily_story')) {
         database.createObjectStore('daily_story', { keyPath: 'id' });
+      }
+
+      // Store for daily_stories (last 30 days carousel cache)
+      if (!database.objectStoreNames.contains('daily_stories')) {
+        const storiesStore = database.createObjectStore('daily_stories', { keyPath: 'id' });
+        storiesStore.createIndex('created_at', 'created_at', { unique: false });
       }
 
       // Store for profiles
