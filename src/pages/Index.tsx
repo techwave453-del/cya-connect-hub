@@ -218,6 +218,7 @@ const Index = () => {
               activities.map((activity, index) => (
                 <ActivityCard
                   key={activity.id}
+                  id={activity.id}
                   title={activity.title}
                   date={activity.date}
                   location={activity.location || undefined}
