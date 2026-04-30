@@ -86,6 +86,27 @@ export type Database = {
         }
         Relationships: []
       }
+      activity_rsvps: {
+        Row: {
+          activity_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          activity_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          activity_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       admin_emails: {
         Row: {
           created_at: string
