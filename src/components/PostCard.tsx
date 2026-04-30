@@ -71,6 +71,50 @@ const PostCard = ({
     await toggleLike();
   };
 
+  const handleShare = async () => {
+    const title = post.title || `#${post.hashtag}`;
+    const textBody = post.description
+      ? `${post.description.substring(0, 200)}${post.description.length > 200 ? "..." : ""}`
+      : `Shared by ${post.username}`;
+    const shareData: ShareData = {
+      title,
+      text: `${title}\n\n${textBody}`,
+      url: typeof window !== "undefined" ? window.location.href : undefined,
+    };
+
+    // Try sharing with image file when possible
+    if (post.image_url && typeof navigator !== "undefined" && navigator.canShare) {
+      try {
+        const response = await fetch(post.image_url);
+        const blob = await response.blob();
+        const file = new File([blob], "post-image.png", { type: blob.type });
+        const withImage = { ...shareData, files: [file] };
+        if (navigator.canShare(withImage)) {
+          await navigator.share(withImage);
+          return;
+        }
+      } catch { /* fall through */ }
+    }
+
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
+          toast.error("Sharing failed");
+        }
+      }
+    } else {
+      // Fallback: copy to clipboard
+      try {
+        await navigator.clipboard.writeText(`${title}\n\n${textBody}\n\n${shareData.url ?? ""}`);
+        toast.success("Post copied to clipboard!");
+      } catch {
+        toast.error("Sharing not supported on this device");
+      }
+    }
+  };
+
   const handleDelete = async () => {
     if (!onDelete) return;
     setDeleting(true);
@@ -195,7 +239,11 @@ const PostCard = ({
             <MessageCircle className="w-5 h-5" />
             <span className="text-sm">{post.comments_count}</span>
           </button>
-          <button className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors ml-auto">
+          <button
+            onClick={handleShare}
+            className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors ml-auto"
+            aria-label="Share post"
+          >
             <Share2 className="w-5 h-5" />
           </button>
         </div>
