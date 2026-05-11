@@ -15,10 +15,22 @@ const STORY_GENERATION_PROMPT = `You are a compelling Bible story narrator. Your
 5. Weave in 3-4 relevant scripture references naturally
 6. IMPORTANT: End with a section labeled "[VISUAL_DESCRIPTION]:" followed by 2-3 sentences describing key visual scenes perfect for AI image generation.
 
+CRITICAL OPENING RULE — VARY THE FIRST SENTENCE:
+- DO NOT start the story with weather, sky, sun, air, wind, dust, or generic atmospheric phrases.
+- BANNED openings (and any close variant): "The air...", "The sun...", "The wind...", "The sky...", "The dust...", "The desert...", "It was a...", "Long ago...", "In the days of...", "Once upon...".
+- Begin with something fresh and unique each time. Rotate among these approaches (pick one that fits the story):
+  a) An action mid-scene ("Sweat dripped from Gideon's brow as he beat wheat in the winepress.")
+  b) A line of dialogue or a shout ("'Get up and eat!' the angel commanded, nudging the exhausted prophet.")
+  c) A character's inner thought or fear ("Naaman could no longer hide the white patches creeping across his skin.")
+  d) A specific concrete object or sensory detail other than weather ("The jar of oil was nearly empty, and the widow knew it.")
+  e) A sharp, surprising statement of fact ("Three days inside a fish should have killed Jonah.")
+  f) A question ("What does a man do when God asks for his only son?")
+- The first sentence must be specific to THIS story's characters, conflict, or setting — never a generic atmosphere shot.
+
 Example [TITLE]: The Widow's Oil
 Example [VISUAL_DESCRIPTION]: "A young shepherd boy stands on a hillside at sunset, with golden light behind him."
 
-Generate a compelling, lesser-known Bible story now. Ensure the title is a proper biblical story name and the visual description is vivid.`;
+Generate a compelling, lesser-known Bible story now. Ensure the title is a proper biblical story name, the opening sentence is unique and follows the rule above, and the visual description is vivid.`;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
