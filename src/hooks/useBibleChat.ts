@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { generateFallbackResponse } from '@/lib/fallbackChat';
+import { supabase } from '@/integrations/supabase/client';
 
 type Message = { role: 'user' | 'assistant'; content: string };
 
@@ -10,6 +11,21 @@ export const useBibleChat = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isOfflineMode, setIsOfflineMode] = useState(false);
+  const [openaiApiKey, setOpenaiApiKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('user_api_keys')
+        .select('openai_api_key')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (data?.openai_api_key) setOpenaiApiKey(data.openai_api_key);
+    })();
+  }, []);
+
  
   const sendMessage = useCallback(async (input: string, options?: { suppressUser?: boolean }) => {
     if (!input.trim() || isLoading) return;
@@ -45,7 +61,7 @@ export const useBibleChat = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: allMessages }),
+        body: JSON.stringify({ messages: allMessages, openaiApiKey }),
       });
 
       if (resp.status === 429 && attempt < MAX_RETRIES) {
@@ -144,7 +160,7 @@ export const useBibleChat = () => {
     } finally {
       setIsLoading(false);
     }
-   }, [messages, isLoading]);
+   }, [messages, isLoading, openaiApiKey]);
 
   const generateInsight = useCallback(async (prompt: string): Promise<string | null> => {
     const MAX_RETRIES = 3;
@@ -155,7 +171,7 @@ export const useBibleChat = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: [{ role: 'user', content: prompt }] }),
+        body: JSON.stringify({ messages: [{ role: 'user', content: prompt }], openaiApiKey }),
       });
       if (resp.status === 429 && attempt < MAX_RETRIES) {
         const delay = Math.min(2000 * Math.pow(2, attempt), 10000);

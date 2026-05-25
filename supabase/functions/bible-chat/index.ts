@@ -1,10 +1,10 @@
- import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
- 
- const corsHeaders = {
-   'Access-Control-Allow-Origin': '*',
-   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
- };
- 
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+};
+
 const BIBLE_SYSTEM_PROMPT = `You are "Scripture Guide" — a warm, friendly Bible study companion who feels like a trusted friend.
 
 PERSONALITY:
@@ -20,96 +20,97 @@ RESPONSE STYLE - DEFAULT (SHORT):
 - End with a simple encouragement or quick prayer thought
 
 RESPONSE STYLE - FULL STORY MODE:
-When user asks for "complete story", "full story", "the whole narrative", "tell me the whole story", or similar:
-- Narrate the entire story like explaining to a close friend, with emotion and vivid detail
-- Include character development, dialogue, sequence of events, and what happened
-- Explain the spiritual significance and lessons at key turning points
-- Keep conversational, engaging, warm tone throughout
-- Weave in 3-4 relevant scripture references naturally into the narrative (not listed separately)
-- If an image is provided in the prompt (markdown format like ![title](url)), include it prominently in your response:
-  * Place the image markdown at a natural point in the story for maximum impact
-  * Follow with an engaging, descriptive caption on the next line like: *Image: [detailed description of the scene, characters, and spiritual significance]*
-  * Image captions should be 1-2 sentences, vivid and immersive
-- End with personal application: "What this teaches us today..."
-- This can be 4-6 rich paragraphs for a full story
+When user asks for "complete story", "full story", "the whole narrative", or similar:
+- Narrate the entire story with emotion and vivid detail
+- Include character development, dialogue, and what happened
+- Explain spiritual significance and lessons at key turning points
+- Weave in 3-4 relevant scripture references naturally
+- End with personal application
 
-WHAT TO AVOID:
-- Long academic explanations in default short mode
-- Listing too many verses without weaving them in
-- Formal or stiff language
-- Repeating what the user already said
+Users may speak English, Swahili, Sheng, or a mix — respond in their style.`;
 
-EXAMPLE TONE:
-Instead of: "That is an excellent question. Let me provide you with a comprehensive answer..."
-Say: "Great question! 💡 Here's what Scripture says..."
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
 
-Remember: Adapt your response length based on what the user asks. Read their intent carefully.`;
- 
- serve(async (req) => {
-   if (req.method === 'OPTIONS') {
-     return new Response('ok', { headers: corsHeaders });
-   }
- 
-   try {
-     const { messages } = await req.json();
-     
-     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-     if (!LOVABLE_API_KEY) {
-       console.error("LOVABLE_API_KEY is not configured");
-       throw new Error("LOVABLE_API_KEY is not configured");
-     }
- 
-     console.log("Starting Bible chat with", messages.length, "messages");
- 
-     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-       method: "POST",
-       headers: {
-         Authorization: `Bearer ${LOVABLE_API_KEY}`,
-         "Content-Type": "application/json",
-       },
-       body: JSON.stringify({
-         model: "google/gemini-3-flash-preview",
-         messages: [
-           { role: "system", content: BIBLE_SYSTEM_PROMPT },
-           ...messages,
-         ],
-         stream: true,
-       }),
-     });
- 
-     if (!response.ok) {
-       const errorText = await response.text();
-       console.error("AI gateway error:", response.status, errorText);
-       
-       if (response.status === 429) {
-         return new Response(JSON.stringify({ error: "Rate limits exceeded. Please try again in a moment." }), {
-           status: 429,
-           headers: { ...corsHeaders, "Content-Type": "application/json" },
-         });
-       }
-       if (response.status === 402) {
-         return new Response(JSON.stringify({ error: "AI service temporarily unavailable." }), {
-           status: 402,
-           headers: { ...corsHeaders, "Content-Type": "application/json" },
-         });
-       }
-       
-       return new Response(JSON.stringify({ error: "AI service error" }), {
-         status: 500,
-         headers: { ...corsHeaders, "Content-Type": "application/json" },
-       });
-     }
- 
-     console.log("AI response started streaming");
- 
-     return new Response(response.body, {
-       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-     });
-   } catch (e) {
-     console.error("Bible chat error:", e);
-     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-       status: 500,
-       headers: { ...corsHeaders, "Content-Type": "application/json" },
-     });
-   }
- });
+  try {
+    const { messages, openaiApiKey } = await req.json();
+
+    const fullMessages = [
+      { role: "system", content: BIBLE_SYSTEM_PROMPT },
+      ...messages,
+    ];
+
+    let endpoint: string;
+    let headers: Record<string, string>;
+    let model: string;
+
+    if (typeof openaiApiKey === "string" && openaiApiKey.startsWith("sk-")) {
+      // Use the user's own OpenAI (ChatGPT) account
+      console.log("Using user-provided OpenAI key");
+      endpoint = "https://api.openai.com/v1/chat/completions";
+      headers = {
+        Authorization: `Bearer ${openaiApiKey}`,
+        "Content-Type": "application/json",
+      };
+      model = "gpt-4o-mini";
+    } else {
+      // Default: Lovable AI gateway with OpenAI GPT
+      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+      endpoint = "https://ai.gateway.lovable.dev/v1/chat/completions";
+      headers = {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      };
+      model = "openai/gpt-5-mini";
+    }
+
+    console.log(`Starting Bible chat with ${messages.length} messages, model=${model}`);
+
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ model, messages: fullMessages, stream: true }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("AI provider error:", response.status, errorText);
+
+      if (response.status === 401) {
+        return new Response(JSON.stringify({ error: "Invalid OpenAI API key. Please check your key in your profile." }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ error: "Rate limit reached. Please try again in a moment." }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: "AI credits exhausted. Add your own OpenAI key in your profile, or add credits to your workspace." }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ error: "AI service error" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(response.body, {
+      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+    });
+  } catch (e) {
+    console.error("Bible chat error:", e);
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
