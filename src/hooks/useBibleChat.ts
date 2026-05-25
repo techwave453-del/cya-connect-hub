@@ -11,6 +11,21 @@ export const useBibleChat = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isOfflineMode, setIsOfflineMode] = useState(false);
+  const [openaiApiKey, setOpenaiApiKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('user_api_keys')
+        .select('openai_api_key')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (data?.openai_api_key) setOpenaiApiKey(data.openai_api_key);
+    })();
+  }, []);
+
  
   const sendMessage = useCallback(async (input: string, options?: { suppressUser?: boolean }) => {
     if (!input.trim() || isLoading) return;
