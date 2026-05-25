@@ -61,7 +61,7 @@ export const useBibleChat = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: allMessages }),
+        body: JSON.stringify({ messages: allMessages, openaiApiKey }),
       });
 
       if (resp.status === 429 && attempt < MAX_RETRIES) {
@@ -160,7 +160,7 @@ export const useBibleChat = () => {
     } finally {
       setIsLoading(false);
     }
-   }, [messages, isLoading]);
+   }, [messages, isLoading, openaiApiKey]);
 
   const generateInsight = useCallback(async (prompt: string): Promise<string | null> => {
     const MAX_RETRIES = 3;
@@ -171,7 +171,7 @@ export const useBibleChat = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: [{ role: 'user', content: prompt }] }),
+        body: JSON.stringify({ messages: [{ role: 'user', content: prompt }], openaiApiKey }),
       });
       if (resp.status === 429 && attempt < MAX_RETRIES) {
         const delay = Math.min(2000 * Math.pow(2, attempt), 10000);
