@@ -182,7 +182,7 @@ export const useBibleChat = () => {
     } finally {
       setIsLoading(false);
     }
-   }, [messages, isLoading, openaiApiKey]);
+   }, [messages, isLoading, openaiApiKey, language, slangDictionary]);
 
   const generateInsight = useCallback(async (prompt: string): Promise<string | null> => {
     const MAX_RETRIES = 3;
