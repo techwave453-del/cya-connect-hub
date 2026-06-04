@@ -30,6 +30,7 @@ import { z } from "zod";
 import AdminGameManagement from "@/components/games/AdminGameManagement";
 import BrandingManagement from "@/components/admin/BrandingManagement";
 import DailyStoryManagement from "@/components/admin/DailyStoryManagement";
+import SlangDictionaryManagement from "@/components/admin/SlangDictionaryManagement";
 
 const emailSchema = z.string().email("Invalid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
