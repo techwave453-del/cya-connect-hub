@@ -83,7 +83,7 @@ const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: Bibl
   const [passageOpen, setPassageOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { messages, isLoading, error, isOfflineMode, sendMessage, clearChat, loadMessages, generateInsight } = useBibleChat();
+  const { messages, isLoading, error, isOfflineMode, sendMessage, clearChat, loadMessages, generateInsight, language, setLanguage } = useBibleChat();
   const { user } = useAuth();
   const { savedChats, loading: loadingSaved, saveChat, deleteChat } = useSavedChats(user);
 
