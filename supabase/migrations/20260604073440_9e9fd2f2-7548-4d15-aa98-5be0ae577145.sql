@@ -1,0 +1,1 @@
+ALTER TABLE public.bible_games ADD COLUMN IF NOT EXISTS bible_story TEXT, ADD COLUMN IF NOT EXISTS testament TEXT CHECK (testament IN ('old','new'));
