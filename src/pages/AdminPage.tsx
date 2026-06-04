@@ -506,6 +506,10 @@ const AdminPage = () => {
               <Image className="h-4 w-4" />
               Branding
             </TabsTrigger>
+            <TabsTrigger value="slang" className="gap-2">
+              <BookOpen className="h-4 w-4" />
+              Slang
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="users" className="space-y-6">
