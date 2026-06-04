@@ -1141,6 +1141,10 @@ const AdminPage = () => {
           <TabsContent value="branding" className="space-y-6">
             <BrandingManagement />
           </TabsContent>
+
+          <TabsContent value="slang" className="space-y-6">
+            <SlangDictionaryManagement />
+          </TabsContent>
         </Tabs>
       </div>
 
