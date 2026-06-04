@@ -266,7 +266,7 @@ export const useBibleChat = () => {
       console.error('generateInsight error:', e);
       return null;
     }
-  }, []);
+  }, [openaiApiKey, language, slangDictionary]);
  
     const clearChat = useCallback(() => {
       setMessages([]);
@@ -278,5 +278,5 @@ export const useBibleChat = () => {
       setError(null);
     }, []);
 
-    return { messages, isLoading, error, isOfflineMode, sendMessage, clearChat, loadMessages, generateInsight };
+    return { messages, isLoading, error, isOfflineMode, sendMessage, clearChat, loadMessages, generateInsight, language, setLanguage };
   };
