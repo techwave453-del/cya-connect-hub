@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { X, Send, Sparkles, Trash2, BookOpen, Reply, Copy, Check, Bookmark, FolderOpen, ChevronLeft, Image, Loader2 } from 'lucide-react';
+import { X, Send, Sparkles, Trash2, BookOpen, Reply, Copy, Check, Bookmark, FolderOpen, ChevronLeft, Image, Loader2, Languages } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ReactMarkdown from 'react-markdown';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -83,7 +84,7 @@ const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: Bibl
   const [passageOpen, setPassageOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { messages, isLoading, error, isOfflineMode, sendMessage, clearChat, loadMessages, generateInsight } = useBibleChat();
+  const { messages, isLoading, error, isOfflineMode, sendMessage, clearChat, loadMessages, generateInsight, language, setLanguage } = useBibleChat();
   const { user } = useAuth();
   const { savedChats, loading: loadingSaved, saveChat, deleteChat } = useSavedChats(user);
 
@@ -608,6 +609,22 @@ const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: Bibl
             </DialogContent>
           </Dialog>
           <div className="flex items-center gap-1">
+            {!showSavedChats && (
+              <Select value={language} onValueChange={(v) => setLanguage(v as any)}>
+                <SelectTrigger
+                  className="h-8 w-auto gap-1 border-border bg-background/50 px-2 text-xs font-medium"
+                  aria-label="Chat language"
+                >
+                  <Languages className="h-3.5 w-3.5 text-primary" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent align="end">
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="sw">Kiswahili</SelectItem>
+                  <SelectItem value="sheng">Sheng</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
             {!showSavedChats && (
               <Button
                 variant="ghost"

@@ -30,6 +30,7 @@ import { z } from "zod";
 import AdminGameManagement from "@/components/games/AdminGameManagement";
 import BrandingManagement from "@/components/admin/BrandingManagement";
 import DailyStoryManagement from "@/components/admin/DailyStoryManagement";
+import SlangDictionaryManagement from "@/components/admin/SlangDictionaryManagement";
 
 const emailSchema = z.string().email("Invalid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
@@ -504,6 +505,10 @@ const AdminPage = () => {
             <TabsTrigger value="branding" className="gap-2">
               <Image className="h-4 w-4" />
               Branding
+            </TabsTrigger>
+            <TabsTrigger value="slang" className="gap-2">
+              <BookOpen className="h-4 w-4" />
+              Slang
             </TabsTrigger>
           </TabsList>
 
@@ -1135,6 +1140,10 @@ const AdminPage = () => {
 
           <TabsContent value="branding" className="space-y-6">
             <BrandingManagement />
+          </TabsContent>
+
+          <TabsContent value="slang" className="space-y-6">
+            <SlangDictionaryManagement />
           </TabsContent>
         </Tabs>
       </div>

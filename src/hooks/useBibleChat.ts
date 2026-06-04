@@ -3,8 +3,10 @@ import { generateFallbackResponse } from '@/lib/fallbackChat';
 import { supabase } from '@/integrations/supabase/client';
 
 type Message = { role: 'user' | 'assistant'; content: string };
+export type ChatLanguage = 'en' | 'sw' | 'sheng';
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bible-chat`;
+const LANG_STORAGE_KEY = 'scripture-guide-language';
 
 export const useBibleChat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -12,6 +14,17 @@ export const useBibleChat = () => {
   const [error, setError] = useState<string | null>(null);
   const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [openaiApiKey, setOpenaiApiKey] = useState<string | null>(null);
+  const [language, setLanguageState] = useState<ChatLanguage>(() => {
+    if (typeof window === 'undefined') return 'en';
+    const stored = window.localStorage.getItem(LANG_STORAGE_KEY) as ChatLanguage | null;
+    return stored === 'sw' || stored === 'sheng' || stored === 'en' ? stored : 'en';
+  });
+  const [slangDictionary, setSlangDictionary] = useState<Array<{ word: string; meaning: string; example: string | null }>>([]);
+
+  const setLanguage = useCallback((lang: ChatLanguage) => {
+    setLanguageState(lang);
+    try { window.localStorage.setItem(LANG_STORAGE_KEY, lang); } catch {}
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -23,6 +36,15 @@ export const useBibleChat = () => {
         .eq('user_id', user.id)
         .maybeSingle();
       if (data?.openai_api_key) setOpenaiApiKey(data.openai_api_key);
+    })();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('slang_dictionary')
+        .select('word, meaning, example');
+      if (data) setSlangDictionary(data as any);
     })();
   }, []);
 
@@ -61,7 +83,7 @@ export const useBibleChat = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: allMessages, openaiApiKey }),
+        body: JSON.stringify({ messages: allMessages, openaiApiKey, language, slangDictionary }),
       });
 
       if (resp.status === 429 && attempt < MAX_RETRIES) {
@@ -160,7 +182,7 @@ export const useBibleChat = () => {
     } finally {
       setIsLoading(false);
     }
-   }, [messages, isLoading, openaiApiKey]);
+   }, [messages, isLoading, openaiApiKey, language, slangDictionary]);
 
   const generateInsight = useCallback(async (prompt: string): Promise<string | null> => {
     const MAX_RETRIES = 3;
@@ -171,7 +193,7 @@ export const useBibleChat = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: [{ role: 'user', content: prompt }], openaiApiKey }),
+        body: JSON.stringify({ messages: [{ role: 'user', content: prompt }], openaiApiKey, language, slangDictionary }),
       });
       if (resp.status === 429 && attempt < MAX_RETRIES) {
         const delay = Math.min(2000 * Math.pow(2, attempt), 10000);
@@ -244,7 +266,7 @@ export const useBibleChat = () => {
       console.error('generateInsight error:', e);
       return null;
     }
-  }, []);
+  }, [openaiApiKey, language, slangDictionary]);
  
     const clearChat = useCallback(() => {
       setMessages([]);
@@ -256,5 +278,5 @@ export const useBibleChat = () => {
       setError(null);
     }, []);
 
-    return { messages, isLoading, error, isOfflineMode, sendMessage, clearChat, loadMessages, generateInsight };
+    return { messages, isLoading, error, isOfflineMode, sendMessage, clearChat, loadMessages, generateInsight, language, setLanguage };
   };
