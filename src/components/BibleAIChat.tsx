@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { X, Send, Sparkles, Trash2, BookOpen, Reply, Copy, Check, Bookmark, FolderOpen, ChevronLeft, Image, Loader2 } from 'lucide-react';
+import { X, Send, Sparkles, Trash2, BookOpen, Reply, Copy, Check, Bookmark, FolderOpen, ChevronLeft, Image, Loader2, Languages } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ReactMarkdown from 'react-markdown';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
