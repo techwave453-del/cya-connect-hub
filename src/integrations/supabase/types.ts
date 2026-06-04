@@ -564,6 +564,39 @@ export type Database = {
         }
         Relationships: []
       }
+      slang_dictionary: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          example: string | null
+          id: string
+          language: string
+          meaning: string
+          updated_at: string
+          word: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          example?: string | null
+          id?: string
+          language?: string
+          meaning: string
+          updated_at?: string
+          word: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          example?: string | null
+          id?: string
+          language?: string
+          meaning?: string
+          updated_at?: string
+          word?: string
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           completed: boolean
