@@ -152,6 +152,7 @@ export type Database = {
       bible_games: {
         Row: {
           bible_reference: string | null
+          bible_story: string | null
           correct_answer: string
           created_at: string
           difficulty: string
@@ -162,10 +163,12 @@ export type Database = {
           options: Json | null
           points: number
           question: string
+          testament: string | null
           updated_at: string
         }
         Insert: {
           bible_reference?: string | null
+          bible_story?: string | null
           correct_answer: string
           created_at?: string
           difficulty?: string
@@ -176,10 +179,12 @@ export type Database = {
           options?: Json | null
           points?: number
           question: string
+          testament?: string | null
           updated_at?: string
         }
         Update: {
           bible_reference?: string | null
+          bible_story?: string | null
           correct_answer?: string
           created_at?: string
           difficulty?: string
@@ -190,6 +195,7 @@ export type Database = {
           options?: Json | null
           points?: number
           question?: string
+          testament?: string | null
           updated_at?: string
         }
         Relationships: []
