@@ -610,6 +610,22 @@ const BibleAIChat = ({ isOpen, onClose, initialMessage, autoSend = false }: Bibl
           </Dialog>
           <div className="flex items-center gap-1">
             {!showSavedChats && (
+              <Select value={language} onValueChange={(v) => setLanguage(v as any)}>
+                <SelectTrigger
+                  className="h-8 w-auto gap-1 border-border bg-background/50 px-2 text-xs font-medium"
+                  aria-label="Chat language"
+                >
+                  <Languages className="h-3.5 w-3.5 text-primary" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent align="end">
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="sw">Kiswahili</SelectItem>
+                  <SelectItem value="sheng">Sheng</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+            {!showSavedChats && (
               <Button
                 variant="ghost"
                 size="icon"
