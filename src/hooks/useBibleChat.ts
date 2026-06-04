@@ -83,7 +83,7 @@ export const useBibleChat = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: allMessages, openaiApiKey }),
+        body: JSON.stringify({ messages: allMessages, openaiApiKey, language, slangDictionary }),
       });
 
       if (resp.status === 429 && attempt < MAX_RETRIES) {
