@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const BIBLE_SYSTEM_PROMPT = `You are "Scripture Guide" — a warm, friendly Bible study companion who feels like a trusted friend.
+const BASE_PROMPT = `You are "Scripture Guide" — a warm, friendly Bible study companion who feels like a trusted friend.
 
 PERSONALITY:
 - Conversational and approachable — talk like a caring friend, not a professor
@@ -25,9 +25,13 @@ When user asks for "complete story", "full story", "the whole narrative", or sim
 - Include character development, dialogue, and what happened
 - Explain spiritual significance and lessons at key turning points
 - Weave in 3-4 relevant scripture references naturally
-- End with personal application
+- End with personal application`;
 
-Users may speak English, Swahili, Sheng, or a mix — respond in their style.`;
+const LANGUAGE_INSTRUCTIONS: Record<string, string> = {
+  en: `LANGUAGE: Respond ONLY in clear, natural English regardless of how the user writes. Keep it warm and conversational.`,
+  sw: `LUGHA: Jibu KWA KISWAHILI SANIFU pekee. Tumia Kiswahili cha kawaida, chenye joto na cha kirafiki. Hata kama mtumiaji ataandika kwa Kiingereza, jibu kwa Kiswahili.`,
+  sheng: `LANGUAGE: Respond in SHENG — the urban Kenyan slang that mixes Swahili, English, and local languages (e.g. "Niaje! Hii story ya Yesu ni mojo kabisa..."). Stay respectful and biblically sound, but keep the vibe street-friendly and relatable to Kenyan youth. Mix freely between Swahili and English words as Sheng does naturally.`,
+};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -35,10 +39,23 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, openaiApiKey } = await req.json();
+    const { messages, openaiApiKey, language, slangDictionary } = await req.json();
+
+    const lang = (typeof language === "string" && LANGUAGE_INSTRUCTIONS[language]) ? language : "en";
+
+    let slangBlock = "";
+    if (Array.isArray(slangDictionary) && slangDictionary.length > 0) {
+      const entries = slangDictionary
+        .slice(0, 300)
+        .map((s: any) => `- ${s.word}: ${s.meaning}${s.example ? ` (e.g. "${s.example}")` : ""}`)
+        .join("\n");
+      slangBlock = `\n\nLOCAL SLANG / LANGUAGE DICTIONARY (use these meanings when interpreting user input or replying):\n${entries}`;
+    }
+
+    const systemPrompt = `${BASE_PROMPT}\n\n${LANGUAGE_INSTRUCTIONS[lang]}${slangBlock}`;
 
     const fullMessages = [
-      { role: "system", content: BIBLE_SYSTEM_PROMPT },
+      { role: "system", content: systemPrompt },
       ...messages,
     ];
 
@@ -47,7 +64,6 @@ serve(async (req) => {
     let model: string;
 
     if (typeof openaiApiKey === "string" && openaiApiKey.startsWith("sk-")) {
-      // Use the user's own OpenAI (ChatGPT) account
       console.log("Using user-provided OpenAI key");
       endpoint = "https://api.openai.com/v1/chat/completions";
       headers = {
@@ -56,7 +72,6 @@ serve(async (req) => {
       };
       model = "gpt-4o-mini";
     } else {
-      // Default: Lovable AI gateway with OpenAI GPT
       const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
       if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
       endpoint = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -67,7 +82,7 @@ serve(async (req) => {
       model = "openai/gpt-5-mini";
     }
 
-    console.log(`Starting Bible chat with ${messages.length} messages, model=${model}`);
+    console.log(`Bible chat: lang=${lang}, msgs=${messages.length}, model=${model}, slang=${Array.isArray(slangDictionary) ? slangDictionary.length : 0}`);
 
     const response = await fetch(endpoint, {
       method: "POST",
