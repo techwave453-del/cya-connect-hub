@@ -180,12 +180,12 @@ const BibleDownloadManager = () => {
           ) : null}
         </div>
 
-        {/* Local AI Model */}
+        {/* Scripture Bot (lightweight offline assistant) */}
         <div className="space-y-2 pt-2 border-t">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Cpu className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Offline AI Model</span>
+              <span className="text-sm font-medium">Scripture Bot (Offline)</span>
               {modelStatus.isLoaded && (
                 <Badge variant="secondary" className="text-xs">
                   <CheckCircle className="w-3 h-3 mr-1" /> Active
@@ -194,7 +194,7 @@ const BibleDownloadManager = () => {
             </div>
           </div>
           <p className="text-xs text-muted-foreground">
-            Runs Qwen2.5 AI model in your browser for offline Q&A. Downloads ~400MB on first use (cached after).
+            A lightweight, purpose-built Bible assistant that works fully offline using your downloaded scriptures. No big download, no memory crashes — instant answers for verses, topics, and characters.
           </p>
           {loadingModel ? (
             <div className="space-y-1">
@@ -207,13 +207,16 @@ const BibleDownloadManager = () => {
           ) : modelStatus.isLoaded ? (
             <Button size="sm" variant="ghost" onClick={handleUnloadModel} className="w-full text-destructive">
               <Trash2 className="w-3 h-3 mr-2" />
-              Unload Model (free memory)
+              Disable Scripture Bot
             </Button>
           ) : (
             <Button size="sm" variant="outline" onClick={handleLoadModel} className="w-full">
               <Cpu className="w-3 h-3 mr-2" />
-              Load Offline AI Model
+              Enable Scripture Bot
             </Button>
+          )}
+          {modelStatus.error && (
+            <p className="text-xs text-destructive">{modelStatus.error}</p>
           )}
           {modelStatus.error && (
             <p className="text-xs text-destructive">{modelStatus.error}</p>

@@ -111,7 +111,7 @@ const InlineBibleDownload = () => {
         </Button>
       )}
 
-      {/* AI Model */}
+      {/* Scripture Bot (lightweight offline assistant) */}
       {loadingModel ? (
         <div className="space-y-1">
           <Progress value={modelProgress} className="h-1.5" />
@@ -121,21 +121,11 @@ const InlineBibleDownload = () => {
         </div>
       ) : modelStatus.isLoaded ? (
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <CheckCircle className="w-3 h-3 text-green-500" /> Offline AI active
-        </div>
-      ) : showMemoryWarning ? (
-        <div className="space-y-1.5">
-          <div className="flex items-start gap-1.5 text-[10px] text-destructive">
-            <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
-            <span>This may crash your browser on this device. Bible search still works without it.</span>
-          </div>
-          <Button size="sm" variant="destructive" onClick={handleModel} className="w-full h-7 text-xs">
-            <Cpu className="w-3 h-3 mr-1" /> Load Anyway (risky)
-          </Button>
+          <CheckCircle className="w-3 h-3 text-green-500" /> Scripture Bot active
         </div>
       ) : (
         <Button size="sm" variant="outline" onClick={handleModel} className="w-full h-7 text-xs" disabled={!!downloading}>
-          <Cpu className="w-3 h-3 mr-1" /> Load Offline AI (~400MB)
+          <Cpu className="w-3 h-3 mr-1" /> Enable Scripture Bot (offline, instant)
         </Button>
       )}
     </div>
