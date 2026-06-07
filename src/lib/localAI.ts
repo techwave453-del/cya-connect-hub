@@ -11,7 +11,7 @@
  * unchanged.
  */
 
-import { searchBible, getTopicalVerses, findByReference, SearchResult } from './bibleSearch';
+import { searchBible, getTopicalVerses, findByReference, fuzzySearchBible, formatCitations, SearchResult } from './bibleSearch';
 import { getBibleDownloadStatus } from './bibleData';
 
 const STORAGE_KEY = 'scripture-bot-enabled';
