@@ -49,7 +49,7 @@ const ChatView = ({ conversation, currentUserId, onConversationUpdate }: ChatVie
   const [showAIChat, setShowAIChat] = useState(false);
   const [aiPrefill, setAiPrefill] = useState<string | undefined>(undefined);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
