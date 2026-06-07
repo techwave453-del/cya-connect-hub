@@ -11,7 +11,7 @@
  * unchanged.
  */
 
-import { searchBible, getTopicalVerses, findByReference, SearchResult } from './bibleSearch';
+import { searchBible, getTopicalVerses, findByReference, fuzzySearchBible, formatCitations, SearchResult } from './bibleSearch';
 import { getBibleDownloadStatus } from './bibleData';
 
 const STORAGE_KEY = 'scripture-bot-enabled';
@@ -257,11 +257,17 @@ export const generateLocalResponse = async (
       }
     }
 
-    // Fall back to keyword search using context (verses already fetched) or prompt
+    // Free-text: fuzzy search with citations (typo-tolerant, stem-aware)
     if (hasBible) {
-      const verses = await searchBible(prompt, { maxResults: 4 });
+      let verses = await fuzzySearchBible(prompt, { maxResults: 5 });
+      // If fuzzy returns nothing, fall back to plain keyword search
+      if (verses.length === 0) {
+        verses = await searchBible(prompt, { maxResults: 5 });
+      }
       if (verses.length) {
-        return `📖 Here's what I found in scripture:\n\n${formatVerses(verses, 4)}\n\n💡 *Want a specific verse or topic? Just ask.*`;
+        const header = `📖 **Top matches for "${prompt.trim()}"**`;
+        const body = formatCitations(verses, header);
+        return `${body}\n\n💡 *Tap any reference in your Bible app to read the surrounding passage. Refine your search with a topic, character name, or full reference for more results.*`;
       }
     }
 

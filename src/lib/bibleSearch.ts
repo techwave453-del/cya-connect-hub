@@ -216,3 +216,168 @@ export const getTopicalVerses = async (
 
   return unique.sort((a, b) => b.relevance - a.relevance).slice(0, 10);
 };
+
+// ──────────────────────────────────────────────────────────────────────
+// Fuzzy search — typo-tolerant, stem-aware, phrase-boosted
+// ──────────────────────────────────────────────────────────────────────
+
+const STOPWORDS = new Set([
+  'the','a','an','of','to','in','on','for','and','or','but','is','are','was',
+  'were','be','been','being','have','has','had','do','does','did','will',
+  'would','should','could','can','may','might','i','you','he','she','it','we',
+  'they','me','him','her','us','them','my','your','his','its','our','their',
+  'this','that','these','those','what','which','who','whom','how','why','when',
+  'where','tell','show','find','about','please','need','want','some','any',
+  'verse','verses','bible','scripture','god','say','says','said',
+]);
+
+/** Cheap stemmer — collapses common English plurals/suffixes. */
+const stem = (w: string): string => {
+  if (w.length <= 3) return w;
+  if (w.endsWith('ies')) return w.slice(0, -3) + 'y';
+  if (w.endsWith('sses')) return w.slice(0, -2);
+  if (w.endsWith('ing') && w.length > 5) return w.slice(0, -3);
+  if (w.endsWith('ed') && w.length > 4) return w.slice(0, -2);
+  if (w.endsWith('eth') && w.length > 5) return w.slice(0, -3);
+  if (w.endsWith('s') && !w.endsWith('ss')) return w.slice(0, -1);
+  return w;
+};
+
+const tokenize = (s: string): string[] =>
+  s.toLowerCase()
+    .replace(/[^a-z0-9\s']/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 1 && !STOPWORDS.has(w));
+
+/** Damerau-Levenshtein-lite distance (capped), used for typo tolerance. */
+const editDistance = (a: string, b: string, max = 2): number => {
+  if (a === b) return 0;
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  const dp: number[] = Array(b.length + 1).fill(0).map((_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = dp[0];
+    dp[0] = i;
+    let rowMin = i;
+    for (let j = 1; j <= b.length; j++) {
+      const tmp = dp[j];
+      dp[j] = a[i - 1] === b[j - 1]
+        ? prev
+        : 1 + Math.min(prev, dp[j], dp[j - 1]);
+      prev = tmp;
+      if (dp[j] < rowMin) rowMin = dp[j];
+    }
+    if (rowMin > max) return max + 1;
+  }
+  return dp[b.length];
+};
+
+/** True if `verseToken` matches `queryToken` exactly, by stem, prefix, or 1-2 edit typo. */
+const tokenMatches = (queryToken: string, queryStem: string, verseToken: string): boolean => {
+  if (verseToken === queryToken) return true;
+  const vStem = stem(verseToken);
+  if (vStem === queryStem) return true;
+  if (queryToken.length >= 5 && verseToken.startsWith(queryToken)) return true;
+  if (queryToken.length >= 5 && queryToken.startsWith(verseToken) && verseToken.length >= 4) return true;
+  const maxEdits = queryToken.length >= 7 ? 2 : queryToken.length >= 5 ? 1 : 0;
+  if (maxEdits === 0) return false;
+  return editDistance(queryToken, verseToken, maxEdits) <= maxEdits;
+};
+
+/**
+ * Fuzzy Bible search.
+ * - Tolerates typos, plurals, and partial words.
+ * - Boosts exact phrase matches.
+ * - Scores by unique-token coverage with a small proximity bonus.
+ */
+export const fuzzySearchBible = async (
+  query: string,
+  options?: { language?: BibleLanguage; maxResults?: number }
+): Promise<SearchResult[]> => {
+  const { language, maxResults = 8 } = options || {};
+  const books = await getAllBooks(language);
+  if (books.length === 0) return [];
+
+  const phrase = query.trim().toLowerCase();
+  const qTokens = tokenize(query);
+  if (qTokens.length === 0) return [];
+  const qStems = qTokens.map(stem);
+  const uniqueQ = qTokens.length;
+
+  const results: SearchResult[] = [];
+
+  for (const book of books) {
+    for (const chapter of book.chapters) {
+      for (const verse of chapter.verses) {
+        const textLower = verse.text.toLowerCase();
+        const vTokens = tokenize(verse.text);
+        if (vTokens.length === 0) continue;
+
+        let matched = 0;
+        const matchedPositions: number[] = [];
+
+        for (let i = 0; i < qTokens.length; i++) {
+          const qt = qTokens[i];
+          const qs = qStems[i];
+          for (let j = 0; j < vTokens.length; j++) {
+            if (tokenMatches(qt, qs, vTokens[j])) {
+              matched++;
+              matchedPositions.push(j);
+              break;
+            }
+          }
+        }
+
+        if (matched === 0) continue;
+
+        let coverage = matched / uniqueQ; // 0..1
+
+        // Exact-phrase boost
+        if (phrase.length > 6 && textLower.includes(phrase)) coverage += 0.5;
+
+        // Proximity bonus: matched tokens close together
+        if (matchedPositions.length >= 2) {
+          const sorted = [...matchedPositions].sort((a, b) => a - b);
+          const span = sorted[sorted.length - 1] - sorted[0];
+          if (span <= matched + 2) coverage += 0.15;
+        }
+
+        // Penalize very long verses slightly (less informative)
+        if (vTokens.length > 40) coverage *= 0.9;
+
+        if (coverage >= 0.34 || matched >= 2) {
+          results.push({
+            book: book.book,
+            chapter: chapter.chapter,
+            verse: verse.verse,
+            text: verse.text,
+            language: book.language,
+            relevance: Math.min(coverage, 1.5),
+          });
+        }
+      }
+    }
+  }
+
+  // Dedupe + sort
+  const seen = new Set<string>();
+  return results
+    .sort((a, b) => b.relevance - a.relevance)
+    .filter(r => {
+      const key = `${r.book}-${r.chapter}-${r.verse}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, maxResults);
+};
+
+/** Format a list of verse results as a citation block. */
+export const formatCitations = (results: SearchResult[], header?: string): string => {
+  if (results.length === 0) return '';
+  const lines = results.map((r, i) => {
+    const cite = `**${r.book} ${r.chapter}:${r.verse}**`;
+    const score = r.relevance >= 1 ? '⭐' : r.relevance >= 0.66 ? '✨' : '·';
+    return `${i + 1}. ${score} *"${r.text.trim()}"*\n   — ${cite}`;
+  });
+  return `${header ? header + '\n\n' : ''}${lines.join('\n\n')}`;
+};
