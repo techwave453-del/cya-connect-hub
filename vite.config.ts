@@ -9,6 +9,11 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    allowedHosts: [
+      "christian-youth-in-action.onrender.com",
+      "localhost",
+      "127.0.0.1",
+    ],
   },
   plugins: [
     react(),
