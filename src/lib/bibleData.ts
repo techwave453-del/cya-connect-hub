@@ -1,6 +1,7 @@
 /**
- * Bible Data Loader — fetches KJV and Swahili Bible JSON from GitHub,
- * caches in IndexedDB for offline use.
+ * Bible Data Loader — fetches local Bible JSON from GitHub,
+ * caches it in IndexedDB for offline use, and supports multiple English
+ * translations + the Swahili edition for the Scripture Guide.
  */
 
 // ── Types ──────────────────────────────────────────────
@@ -15,13 +16,23 @@ export interface BibleChapter {
 }
 
 export interface BibleBook {
-  id: string; // e.g. "genesis"
+  id: string; // e.g. "kjv_genesis"
   book: string; // display name
   chapters: BibleChapter[];
   language: 'en' | 'sw';
+  version: BibleVersionId;
 }
 
 export type BibleLanguage = 'en' | 'sw';
+export type BibleVersionId = 'kjv' | 'web' | 'asv' | 'swahili';
+
+export interface BibleVersionOption {
+  id: BibleVersionId;
+  label: string;
+  language: BibleLanguage;
+  description: string;
+  baseUrl?: string;
+}
 
 // ── Book lists ─────────────────────────────────────────
 export const KJV_BOOKS = [
@@ -39,6 +50,15 @@ export const KJV_BOOKS = [
   '1Timothy','2Timothy','Titus','Philemon','Hebrews',
   'James','1Peter','2Peter','1John','2John','3John','Jude','Revelation',
 ];
+
+export const ENGLISH_BIBLE_VERSIONS: BibleVersionOption[] = [
+  { id: 'kjv', label: 'KJV', language: 'en', description: 'King James Version', baseUrl: 'https://raw.githubusercontent.com/aruljohn/Bible-kjv/master' },
+  { id: 'web', label: 'WEB', language: 'en', description: 'World English Bible', baseUrl: 'https://raw.githubusercontent.com/aruljohn/Bible-web/master' },
+  { id: 'asv', label: 'ASV', language: 'en', description: 'American Standard Version', baseUrl: 'https://raw.githubusercontent.com/aruljohn/Bible-asv/master' },
+  { id: 'swahili', label: 'Swahili', language: 'sw', description: 'Biblia Takatifu', baseUrl: 'https://raw.githubusercontent.com/shemmjunior/swahili-bible-edition/main/json/full_version' },
+];
+
+export const BIBLE_VERSIONS = ENGLISH_BIBLE_VERSIONS;
 
 // Human-readable display names
 export const BOOK_DISPLAY_NAMES: Record<string, string> = {
@@ -61,6 +81,19 @@ export const BOOK_DISPLAY_NAMES: Record<string, string> = {
   'Titus':'Titus','Philemon':'Philemon','Hebrews':'Hebrews','James':'James',
   '1Peter':'1 Peter','2Peter':'2 Peter','1John':'1 John','2John':'2 John',
   '3John':'3 John','Jude':'Jude','Revelation':'Revelation',
+};
+
+const PREFERRED_VERSION_KEY = 'scripture-preferred-version';
+
+export const getPreferredBibleVersion = (): BibleVersionId => {
+  if (typeof localStorage === 'undefined') return 'kjv';
+  const saved = localStorage.getItem(PREFERRED_VERSION_KEY);
+  return (saved === 'kjv' || saved === 'web' || saved === 'asv' || saved === 'swahili') ? saved : 'kjv';
+};
+
+export const setPreferredBibleVersion = (version: BibleVersionId) => {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.setItem(PREFERRED_VERSION_KEY, version);
 };
 
 // ── IndexedDB helpers (separate from offlineDb to avoid version conflicts) ──
@@ -106,32 +139,38 @@ export const getBook = async (id: string): Promise<BibleBook | undefined> => {
   });
 };
 
-export const getAllBooks = async (language?: BibleLanguage): Promise<BibleBook[]> => {
+export const getAllBooks = async (
+  language?: BibleLanguage,
+  version?: BibleVersionId
+): Promise<BibleBook[]> => {
   const db = await openBibleDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readonly');
     const store = tx.objectStore(STORE_NAME);
-    if (language) {
-      const idx = store.index('language');
-      const req = idx.getAll(language);
-      req.onsuccess = () => resolve(req.result as BibleBook[]);
-      req.onerror = () => reject(req.error);
-    } else {
-      const req = store.getAll();
-      req.onsuccess = () => resolve(req.result as BibleBook[]);
-      req.onerror = () => reject(req.error);
-    }
+    const req = store.getAll();
+    req.onsuccess = () => {
+      let books = req.result as BibleBook[];
+      if (language) books = books.filter(book => book.language === language);
+      if (version) books = books.filter(book => book.version === version);
+      resolve(books);
+    };
+    req.onerror = () => reject(req.error);
   });
 };
 
-export const getDownloadedBookCount = async (language: BibleLanguage): Promise<number> => {
-  const books = await getAllBooks(language);
+export const getDownloadedBookCount = async (
+  language: BibleLanguage,
+  version?: BibleVersionId
+): Promise<number> => {
+  const books = await getAllBooks(language, version);
   return books.length;
 };
 
 // ── Fetch from GitHub ──────────────────────────────────
 
 const KJV_BASE = 'https://raw.githubusercontent.com/aruljohn/Bible-kjv/master';
+const WEB_BASE = 'https://raw.githubusercontent.com/aruljohn/Bible-web/master';
+const ASV_BASE = 'https://raw.githubusercontent.com/aruljohn/Bible-asv/master';
 
 interface KJVRawBook {
   book: string;
@@ -142,16 +181,37 @@ export const fetchKJVBook = async (
   bookName: string,
   onProgress?: (msg: string) => void
 ): Promise<BibleBook | null> => {
-  const id = `kjv_${bookName.toLowerCase()}`;
+  return fetchEnglishBook('kjv', bookName, KJV_BASE, onProgress);
+};
 
-  // Check cache first
+export const fetchWEBBook = async (
+  bookName: string,
+  onProgress?: (msg: string) => void
+): Promise<BibleBook | null> => {
+  return fetchEnglishBook('web', bookName, WEB_BASE, onProgress);
+};
+
+export const fetchASVBook = async (
+  bookName: string,
+  onProgress?: (msg: string) => void
+): Promise<BibleBook | null> => {
+  return fetchEnglishBook('asv', bookName, ASV_BASE, onProgress);
+};
+
+const fetchEnglishBook = async (
+  version: 'kjv' | 'web' | 'asv',
+  bookName: string,
+  baseUrl: string,
+  onProgress?: (msg: string) => void
+): Promise<BibleBook | null> => {
+  const id = `${version}_${bookName.toLowerCase()}`;
   const cached = await getBook(id);
   if (cached) return cached;
 
   onProgress?.(`Downloading ${BOOK_DISPLAY_NAMES[bookName] || bookName}...`);
 
   try {
-    const resp = await fetch(`${KJV_BASE}/${bookName}.json`);
+    const resp = await fetch(`${baseUrl}/${bookName}.json`);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const raw: KJVRawBook = await resp.json();
 
@@ -160,13 +220,14 @@ export const fetchKJVBook = async (
       book: raw.book,
       chapters: raw.chapters,
       language: 'en',
+      version,
     };
 
     await putBook(book);
-    console.log(`[bibleData] Cached KJV book: ${book.book}`);
+    console.log(`[bibleData] Cached ${version.toUpperCase()} book: ${book.book}`);
     return book;
   } catch (err) {
-    console.error(`[bibleData] Failed to fetch KJV ${bookName}:`, err);
+    console.error(`[bibleData] Failed to fetch ${version.toUpperCase()} ${bookName}:`, err);
     return null;
   }
 };
@@ -198,7 +259,6 @@ export const fetchSwahiliBible = async (
       const bName = bookNames[i];
       const id = `sw_${bName.toLowerCase().replace(/\s+/g, '_')}`;
 
-      // Check if already cached
       const existing = await getBook(id);
       if (existing) { saved++; continue; }
 
@@ -213,7 +273,7 @@ export const fetchSwahiliBible = async (
         })
       );
 
-      const book: BibleBook = { id, book: bName, chapters, language: 'sw' };
+      const book: BibleBook = { id, book: bName, chapters, language: 'sw', version: 'swahili' };
       await putBook(book);
       saved++;
       onProgress?.(`Swahili: ${bName}`, Math.round((saved / bookNames.length) * 100));
@@ -224,6 +284,24 @@ export const fetchSwahiliBible = async (
   } catch (err) {
     console.error('[bibleData] Failed to fetch Swahili Bible:', err);
     return 0;
+  }
+};
+
+export const downloadBibleVersion = async (
+  version: BibleVersionId,
+  onProgress?: (msg: string, pct: number) => void
+): Promise<number> => {
+  switch (version) {
+    case 'kjv':
+      return downloadAllKJV(onProgress);
+    case 'web':
+      return downloadAllWEB(onProgress);
+    case 'asv':
+      return downloadAllASV(onProgress);
+    case 'swahili':
+      return fetchSwahiliBible(onProgress);
+    default:
+      return 0;
   }
 };
 
@@ -238,10 +316,41 @@ export const downloadAllKJV = async (
       onProgress?.(msg, Math.round(((i + 1) / KJV_BOOKS.length) * 100))
     );
     if (result) downloaded++;
-    // Small delay to avoid GitHub rate limits
     if (i % 5 === 4) await new Promise(r => setTimeout(r, 300));
   }
   console.log(`[bibleData] Downloaded ${downloaded}/${KJV_BOOKS.length} KJV books`);
+  return downloaded;
+};
+
+export const downloadAllWEB = async (
+  onProgress?: (msg: string, pct: number) => void
+): Promise<number> => {
+  let downloaded = 0;
+  for (let i = 0; i < KJV_BOOKS.length; i++) {
+    const name = KJV_BOOKS[i];
+    const result = await fetchWEBBook(name, (msg) =>
+      onProgress?.(msg, Math.round(((i + 1) / KJV_BOOKS.length) * 100))
+    );
+    if (result) downloaded++;
+    if (i % 5 === 4) await new Promise(r => setTimeout(r, 300));
+  }
+  console.log(`[bibleData] Downloaded ${downloaded}/${KJV_BOOKS.length} WEB books`);
+  return downloaded;
+};
+
+export const downloadAllASV = async (
+  onProgress?: (msg: string, pct: number) => void
+): Promise<number> => {
+  let downloaded = 0;
+  for (let i = 0; i < KJV_BOOKS.length; i++) {
+    const name = KJV_BOOKS[i];
+    const result = await fetchASVBook(name, (msg) =>
+      onProgress?.(msg, Math.round(((i + 1) / KJV_BOOKS.length) * 100))
+    );
+    if (result) downloaded++;
+    if (i % 5 === 4) await new Promise(r => setTimeout(r, 300));
+  }
+  console.log(`[bibleData] Downloaded ${downloaded}/${KJV_BOOKS.length} ASV books`);
   return downloaded;
 };
 
@@ -250,15 +359,21 @@ export const lookupVerse = async (
   bookName: string,
   chapter: number,
   verse?: number,
-  language: BibleLanguage = 'en'
+  language: BibleLanguage = 'en',
+  version: BibleVersionId = getPreferredBibleVersion()
 ): Promise<string | null> => {
-  const prefix = language === 'en' ? 'kjv' : 'sw';
-  // Try to find the book by various ID formats
-  const possibleIds = [
-    `${prefix}_${bookName.toLowerCase().replace(/\s+/g, '')}`,
-    `${prefix}_${bookName.toLowerCase().replace(/\s+/g, '_')}`,
-    `${prefix}_${bookName.toLowerCase()}`,
-  ];
+  const prefixes = language === 'en'
+    ? [version, 'kjv', 'web', 'asv']
+    : ['swahili'];
+
+  const possibleIds: string[] = [];
+  for (const prefix of prefixes) {
+    possibleIds.push(
+      `${prefix}_${bookName.toLowerCase().replace(/\s+/g, '')}`,
+      `${prefix}_${bookName.toLowerCase().replace(/\s+/g, '_')}`,
+      `${prefix}_${bookName.toLowerCase()}`
+    );
+  }
 
   for (const id of possibleIds) {
     const book = await getBook(id);
@@ -272,7 +387,6 @@ export const lookupVerse = async (
       return v ? `${book.book} ${chapter}:${verse} — "${v.text}"` : null;
     }
 
-    // Return whole chapter
     return ch.verses.map(v => `${v.verse}. ${v.text}`).join('\n');
   }
 
@@ -283,15 +397,32 @@ export const lookupVerse = async (
 export const getBibleDownloadStatus = async (): Promise<{
   kjvCount: number;
   kjvTotal: number;
+  webCount: number;
+  asvCount: number;
   swCount: number;
+  versionCounts: Record<BibleVersionId, number>;
+  totalDownloaded: number;
   isFullyDownloaded: boolean;
 }> => {
-  const kjvCount = await getDownloadedBookCount('en');
-  const swCount = await getDownloadedBookCount('sw');
+  const kjvCount = await getDownloadedBookCount('en', 'kjv');
+  const webCount = await getDownloadedBookCount('en', 'web');
+  const asvCount = await getDownloadedBookCount('en', 'asv');
+  const swCount = await getDownloadedBookCount('sw', 'swahili');
+  const versionCounts: Record<BibleVersionId, number> = {
+    kjv: kjvCount,
+    web: webCount,
+    asv: asvCount,
+    swahili: swCount,
+  };
+
   return {
     kjvCount,
     kjvTotal: KJV_BOOKS.length,
+    webCount,
+    asvCount,
     swCount,
-    isFullyDownloaded: kjvCount >= KJV_BOOKS.length && swCount > 0,
+    versionCounts,
+    totalDownloaded: kjvCount + webCount + asvCount + swCount,
+    isFullyDownloaded: kjvCount >= KJV_BOOKS.length && webCount >= KJV_BOOKS.length && asvCount >= KJV_BOOKS.length && swCount > 0,
   };
 };

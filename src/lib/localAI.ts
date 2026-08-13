@@ -12,7 +12,7 @@
  */
 
 import { searchBible, getTopicalVerses, findByReference, fuzzySearchBible, formatCitations, SearchResult } from './bibleSearch';
-import { getBibleDownloadStatus } from './bibleData';
+import { getBibleDownloadStatus, getPreferredBibleVersion } from './bibleData';
 
 const STORAGE_KEY = 'scripture-bot-enabled';
 
@@ -195,7 +195,8 @@ export const generateLocalResponse = async (
   try {
     const intent = detectIntent(prompt);
     const status = await getBibleDownloadStatus();
-    const hasBible = status.kjvCount > 0 || status.swCount > 0;
+    const preferredVersion = getPreferredBibleVersion();
+    const hasBible = status.totalDownloaded > 0;
 
     if (intent.isGreeting) return pick(GREETING_RESPONSES);
 
@@ -228,7 +229,7 @@ export const generateLocalResponse = async (
 
     // Bible reference lookup
     if (intent.reference && hasBible) {
-      const verses = await findByReference(intent.reference);
+      const verses = await findByReference(intent.reference, 'en', preferredVersion);
       if (verses.length) {
         const intro = intent.isMeaning
           ? `📖 Here's **${intent.reference}**. As you read, notice who is speaking, who they're speaking to, and what God is revealing about Himself:`
@@ -250,7 +251,7 @@ export const generateLocalResponse = async (
 
     // Topical
     if (intent.topic && hasBible) {
-      const verses = await getTopicalVerses(intent.topic);
+      const verses = await getTopicalVerses(intent.topic, 'en', preferredVersion);
       if (verses.length) {
         const intro = TOPIC_INTROS[intent.topic] || `Here are verses about **${intent.topic}**:`;
         return `${intro}\n\n${formatVerses(verses, 4)}\n\n💡 *Pick one verse and sit with it for a few minutes today.*`;
@@ -259,10 +260,9 @@ export const generateLocalResponse = async (
 
     // Free-text: fuzzy search with citations (typo-tolerant, stem-aware)
     if (hasBible) {
-      let verses = await fuzzySearchBible(prompt, { maxResults: 5 });
-      // If fuzzy returns nothing, fall back to plain keyword search
+      let verses = await fuzzySearchBible(prompt, { maxResults: 5, version: preferredVersion });
       if (verses.length === 0) {
-        verses = await searchBible(prompt, { maxResults: 5 });
+        verses = await searchBible(prompt, { version: preferredVersion, maxResults: 5 });
       }
       if (verses.length) {
         const header = `📖 **Top matches for "${prompt.trim()}"**`;

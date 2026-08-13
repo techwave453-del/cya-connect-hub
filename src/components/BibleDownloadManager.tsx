@@ -10,6 +10,11 @@ import {
   fetchSwahiliBible,
   getBibleDownloadStatus,
   KJV_BOOKS,
+  downloadBibleVersion,
+  BIBLE_VERSIONS,
+  BibleVersionId,
+  getPreferredBibleVersion,
+  setPreferredBibleVersion,
 } from '@/lib/bibleData';
 import {
   loadModel,
@@ -20,8 +25,11 @@ import {
 
 const BibleDownloadManager = () => {
   const [kjvCount, setKjvCount] = useState(0);
+  const [webCount, setWebCount] = useState(0);
+  const [asvCount, setAsvCount] = useState(0);
   const [swCount, setSwCount] = useState(0);
-  const [downloading, setDownloading] = useState<'kjv' | 'sw' | null>(null);
+  const [downloading, setDownloading] = useState<BibleVersionId | null>(null);
+  const [selectedVersion, setSelectedVersion] = useState<BibleVersionId>(getPreferredBibleVersion());
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [downloadMsg, setDownloadMsg] = useState('');
   const [modelStatus, setModelStatus] = useState(getModelStatus());
@@ -32,7 +40,10 @@ const BibleDownloadManager = () => {
   const refreshStatus = useCallback(async () => {
     const status = await getBibleDownloadStatus();
     setKjvCount(status.kjvCount);
+    setWebCount(status.webCount);
+    setAsvCount(status.asvCount);
     setSwCount(status.swCount);
+    setSelectedVersion(getPreferredBibleVersion());
     setModelStatus(getModelStatus());
   }, []);
 
@@ -40,15 +51,18 @@ const BibleDownloadManager = () => {
     refreshStatus();
   }, [refreshStatus]);
 
-  const handleDownloadKJV = async () => {
-    setDownloading('kjv');
+  const handleDownloadVersion = async (version: BibleVersionId) => {
+    setDownloading(version);
     setDownloadProgress(0);
     try {
-      const count = await downloadAllKJV((msg, pct) => {
+      const count = await downloadBibleVersion(version, (msg, pct) => {
         setDownloadMsg(msg);
         setDownloadProgress(pct);
       });
-      toast({ title: `Downloaded ${count} KJV books ✅` });
+      setPreferredBibleVersion(version);
+      setSelectedVersion(version);
+      const label = BIBLE_VERSIONS.find(v => v.id === version)?.label ?? version;
+      toast({ title: `Downloaded ${count} ${label} books ✅` });
     } catch (err) {
       toast({ title: 'Download failed', description: String(err), variant: 'destructive' });
     } finally {
@@ -57,22 +71,10 @@ const BibleDownloadManager = () => {
     }
   };
 
-  const handleDownloadSwahili = async () => {
-    setDownloading('sw');
-    setDownloadProgress(0);
-    try {
-      const count = await fetchSwahiliBible((msg, pct) => {
-        setDownloadMsg(msg);
-        setDownloadProgress(pct);
-      });
-      toast({ title: `Downloaded ${count} Swahili books ✅` });
-    } catch (err) {
-      toast({ title: 'Download failed', description: String(err), variant: 'destructive' });
-    } finally {
-      setDownloading(null);
-      refreshStatus();
-    }
-  };
+  const handleDownloadKJV = async () => { await handleDownloadVersion('kjv'); };
+  const handleDownloadWeb = async () => { await handleDownloadVersion('web'); };
+  const handleDownloadAsv = async () => { await handleDownloadVersion('asv'); };
+  const handleDownloadSwahili = async () => { await handleDownloadVersion('swahili'); };
 
   const [memoryWarningShown, setMemoryWarningShown] = useState(false);
 
@@ -111,6 +113,8 @@ const BibleDownloadManager = () => {
   };
 
   const kjvComplete = kjvCount >= KJV_BOOKS.length;
+  const webComplete = webCount >= KJV_BOOKS.length;
+  const asvComplete = asvCount >= KJV_BOOKS.length;
   const swComplete = swCount > 0;
 
   return (
@@ -151,6 +155,64 @@ const BibleDownloadManager = () => {
           ) : null}
         </div>
 
+        {/* WEB Download */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <HardDrive className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-medium">WEB Bible</span>
+              {webComplete && (
+                <Badge variant="secondary" className="text-xs">
+                  <CheckCircle className="w-3 h-3 mr-1" /> Downloaded
+                </Badge>
+              )}
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {webCount}/{KJV_BOOKS.length} books
+            </span>
+          </div>
+          {downloading === 'web' ? (
+            <div className="space-y-1">
+              <Progress value={downloadProgress} className="h-2" />
+              <p className="text-xs text-muted-foreground">{downloadMsg}</p>
+            </div>
+          ) : !webComplete ? (
+            <Button size="sm" variant="outline" onClick={handleDownloadWeb} className="w-full">
+              <Download className="w-3 h-3 mr-2" />
+              Download WEB (~4.5MB)
+            </Button>
+          ) : null}
+        </div>
+
+        {/* ASV Download */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <HardDrive className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-medium">ASV Bible</span>
+              {asvComplete && (
+                <Badge variant="secondary" className="text-xs">
+                  <CheckCircle className="w-3 h-3 mr-1" /> Downloaded
+                </Badge>
+              )}
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {asvCount}/{KJV_BOOKS.length} books
+            </span>
+          </div>
+          {downloading === 'asv' ? (
+            <div className="space-y-1">
+              <Progress value={downloadProgress} className="h-2" />
+              <p className="text-xs text-muted-foreground">{downloadMsg}</p>
+            </div>
+          ) : !asvComplete ? (
+            <Button size="sm" variant="outline" onClick={handleDownloadAsv} className="w-full">
+              <Download className="w-3 h-3 mr-2" />
+              Download ASV (~4.5MB)
+            </Button>
+          ) : null}
+        </div>
+
         {/* Swahili Download */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -167,7 +229,7 @@ const BibleDownloadManager = () => {
               {swCount > 0 ? `${swCount} books` : 'Not downloaded'}
             </span>
           </div>
-          {downloading === 'sw' ? (
+          {downloading === 'swahili' ? (
             <div className="space-y-1">
               <Progress value={downloadProgress} className="h-2" />
               <p className="text-xs text-muted-foreground">{downloadMsg}</p>
@@ -178,6 +240,27 @@ const BibleDownloadManager = () => {
               Download Swahili Bible (~4.5MB)
             </Button>
           ) : null}
+        </div>
+
+        <div className="rounded-md border bg-muted/20 p-2 text-xs text-muted-foreground">
+          <div className="mb-1 font-medium text-foreground">Preferred offline version</div>
+          <div className="flex flex-wrap gap-2">
+            {BIBLE_VERSIONS.map(version => (
+              <Button
+                key={version.id}
+                size="sm"
+                variant={selectedVersion === version.id ? 'default' : 'outline'}
+                className="h-7 text-[10px]"
+                onClick={() => {
+                  setSelectedVersion(version.id);
+                  setPreferredBibleVersion(version.id);
+                  toast({ title: `${version.label} selected for offline Scripture Guide` });
+                }}
+              >
+                {version.label}
+              </Button>
+            ))}
+          </div>
         </div>
 
         {/* Scripture Bot (lightweight offline assistant) */}

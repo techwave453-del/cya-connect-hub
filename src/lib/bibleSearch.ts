@@ -2,7 +2,14 @@
  * Bible Search Engine — keyword and fuzzy search across cached Bible data
  */
 
-import { getAllBooks, BibleBook, BibleLanguage, BOOK_DISPLAY_NAMES } from './bibleData';
+import {
+  getAllBooks,
+  BibleBook,
+  BibleLanguage,
+  BOOK_DISPLAY_NAMES,
+  BibleVersionId,
+  getPreferredBibleVersion,
+} from './bibleData';
 
 export interface SearchResult {
   book: string;
@@ -21,14 +28,17 @@ export const searchBible = async (
   query: string,
   options?: {
     language?: BibleLanguage;
+    version?: BibleVersionId;
     maxResults?: number;
     bookFilter?: string;
   }
 ): Promise<SearchResult[]> => {
-  const { language, maxResults = 20, bookFilter } = options || {};
-  const books = await getAllBooks(language);
+  const { language, version, maxResults = 20, bookFilter } = options || {};
+  const preferredVersion = version ?? (language === 'sw' ? 'swahili' : getPreferredBibleVersion());
+  const books = await getAllBooks(language, preferredVersion);
+  const fallbackBooks = books.length > 0 ? books : await getAllBooks(language);
 
-  if (books.length === 0) return [];
+  if (fallbackBooks.length === 0) return [];
 
   const keywords = query
     .toLowerCase()
@@ -40,7 +50,7 @@ export const searchBible = async (
 
   const results: SearchResult[] = [];
 
-  for (const book of books) {
+  for (const book of fallbackBooks) {
     if (bookFilter && !book.book.toLowerCase().includes(bookFilter.toLowerCase())) continue;
 
     for (const chapter of book.chapters) {
@@ -88,19 +98,21 @@ export const searchBible = async (
  */
 export const findByReference = async (
   reference: string,
-  language: BibleLanguage = 'en'
+  language: BibleLanguage = 'en',
+  version?: BibleVersionId
 ): Promise<SearchResult[]> => {
-  // Parse reference like "John 3:16" or "1 Corinthians 13:4-7"
-  const match = reference.match(/^(\d?\s*\w+)\s+(\d+):?(\d+)?(?:-(\d+))?$/i);
+  const match = reference.match(/^(\d?\s*[A-Za-z]+(?:\s+[A-Za-z]+)?)\s+(\d+):?(\d+)?(?:-(\d+))?$/i);
   if (!match) return [];
 
   const [, bookPart, chapterStr, verseStart, verseEnd] = match;
   const chapter = parseInt(chapterStr);
-  const books = await getAllBooks(language);
+  const preferredVersion = version ?? (language === 'sw' ? 'swahili' : getPreferredBibleVersion());
+  const books = await getAllBooks(language, preferredVersion);
+  const fallbackBooks = books.length > 0 ? books : await getAllBooks(language);
 
   const bookNameNorm = bookPart.trim().toLowerCase().replace(/\s+/g, '');
 
-  for (const book of books) {
+  for (const book of fallbackBooks) {
     const bookNorm = book.book.toLowerCase().replace(/\s+/g, '');
     if (!bookNorm.includes(bookNameNorm) && !bookNameNorm.includes(bookNorm)) continue;
 
@@ -171,7 +183,8 @@ export const formatSearchResults = (
  */
 export const getTopicalVerses = async (
   topic: string,
-  language: BibleLanguage = 'en'
+  language: BibleLanguage = 'en',
+  version?: BibleVersionId
 ): Promise<SearchResult[]> => {
   // Map common topics to relevant search terms
   const topicKeywords: Record<string, string[]> = {
@@ -201,7 +214,7 @@ export const getTopicalVerses = async (
 
   const allResults: SearchResult[] = [];
   for (const term of searchTerms) {
-    const results = await searchBible(term, { language, maxResults: 5 });
+    const results = await searchBible(term, { language, version, maxResults: 5 });
     allResults.push(...results);
   }
 
@@ -291,11 +304,13 @@ const tokenMatches = (queryToken: string, queryStem: string, verseToken: string)
  */
 export const fuzzySearchBible = async (
   query: string,
-  options?: { language?: BibleLanguage; maxResults?: number }
+  options?: { language?: BibleLanguage; version?: BibleVersionId; maxResults?: number }
 ): Promise<SearchResult[]> => {
-  const { language, maxResults = 8 } = options || {};
-  const books = await getAllBooks(language);
-  if (books.length === 0) return [];
+  const { language, version, maxResults = 8 } = options || {};
+  const preferredVersion = version ?? (language === 'sw' ? 'swahili' : getPreferredBibleVersion());
+  const books = await getAllBooks(language, preferredVersion);
+  const fallbackBooks = books.length > 0 ? books : await getAllBooks(language);
+  if (fallbackBooks.length === 0) return [];
 
   const phrase = query.trim().toLowerCase();
   const qTokens = tokenize(query);
@@ -305,7 +320,7 @@ export const fuzzySearchBible = async (
 
   const results: SearchResult[] = [];
 
-  for (const book of books) {
+  for (const book of fallbackBooks) {
     for (const chapter of book.chapters) {
       for (const verse of chapter.verses) {
         const textLower = verse.text.toLowerCase();
