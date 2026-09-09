@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useBibleGames, BibleGame } from "@/hooks/useBibleGames";
 import { useQuestionGenerator } from "@/hooks/useQuestionGenerator";
+import { getMissionArt, buildMissionScene } from "@/lib/missionArt";
 
 const rankDifficulty = (difficulty: BibleGame["difficulty"]): number => {
   if (difficulty === "hard") return 3;
@@ -14,40 +15,8 @@ const rankDifficulty = (difficulty: BibleGame["difficulty"]): number => {
 
 const MISSION_ICONS = ["⚔️", "🛡️", "🏹", "👑", "🔥", "⚡", "🗡️", "🌟", "💎", "🏰"];
 
-const CharacterSilhouette = ({ missionIndex, difficulty }: { missionIndex: number; difficulty: string }) => {
-  const colors = {
-    easy: { primary: "hsl(var(--primary) / 0.6)", bg: "hsl(var(--primary) / 0.08)" },
-    medium: { primary: "hsl(var(--primary) / 0.8)", bg: "hsl(var(--primary) / 0.12)" },
-    hard: { primary: "hsl(var(--primary))", bg: "hsl(var(--primary) / 0.18)" },
-  };
-  const c = colors[difficulty as keyof typeof colors] || colors.easy;
-
-  return (
-    <svg viewBox="0 0 120 120" className="w-24 h-24 mx-auto" aria-hidden>
-      <defs>
-        <radialGradient id={`char-glow-${missionIndex}`}>
-          <stop offset="0%" stopColor={c.primary} />
-          <stop offset="100%" stopColor="transparent" />
-        </radialGradient>
-      </defs>
-      {/* Glow background */}
-      <circle cx="60" cy="60" r="55" fill={c.bg} />
-      <circle cx="60" cy="60" r="40" fill={`url(#char-glow-${missionIndex})`} opacity="0.4" className="animate-pulse" />
-      {/* Shield body */}
-      <path
-        d="M60 20 L85 35 L85 65 Q85 90 60 105 Q35 90 35 65 L35 35 Z"
-        fill={c.bg}
-        stroke={c.primary}
-        strokeWidth="2"
-      />
-      {/* Star center */}
-      <polygon
-        points="60,40 63,52 76,52 66,60 70,72 60,64 50,72 54,60 44,52 57,52"
-        fill={c.primary}
-      />
-    </svg>
-  );
-};
+const prefersReducedMotion = () =>
+  typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 const XpBar = ({ xp, missionsDone, total }: { xp: number; missionsDone: number; total: number }) => (
   <div className="space-y-2">
@@ -70,6 +39,44 @@ const XpBar = ({ xp, missionsDone, total }: { xp: number; missionsDone: number; 
   </div>
 );
 
+/** A comic-style speech bubble spoken by the illustrated character. */
+const SpeechBubble = ({
+  children,
+  tone = "character",
+  visible,
+}: {
+  children: React.ReactNode;
+  tone?: "narration" | "character" | "question";
+  visible: boolean;
+}) => (
+  <div
+    className={cn(
+      "flex transition-all duration-300",
+      visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none h-0 overflow-hidden"
+    )}
+  >
+    <div
+      className={cn(
+        "relative max-w-[92%] rounded-2xl px-4 py-3 text-sm leading-relaxed border",
+        tone === "narration" && "bg-muted/60 border-border text-muted-foreground italic rounded-bl-sm",
+        tone === "character" && "bg-muted border-border text-foreground rounded-bl-sm",
+        tone === "question" && "bg-primary/10 border-primary/40 text-foreground font-semibold rounded-bl-sm"
+      )}
+    >
+      {children}
+      <span
+        aria-hidden
+        className={cn(
+          "absolute -left-1.5 bottom-2 w-3 h-3 rotate-45 border-l border-b",
+          tone === "narration" && "bg-muted/60 border-border",
+          tone === "character" && "bg-muted border-border",
+          tone === "question" && "bg-primary/10 border-primary/40"
+        )}
+      />
+    </div>
+  </div>
+);
+
 const CharacterMissions = () => {
   const { games, loading, isOnline, refetch } = useBibleGames("character_missions");
   const { generateQuestions, isGenerating, shouldGenerate } = useQuestionGenerator();
@@ -78,7 +85,7 @@ const CharacterMissions = () => {
   const [answered, setAnswered] = useState(false);
   const [xp, setXp] = useState(0);
   const [finished, setFinished] = useState(false);
-  const [flipped, setFlipped] = useState(false);
+  const [step, setStep] = useState(0);
 
   const missions = useMemo(
     () => [...games].sort((a, b) => rankDifficulty(b.difficulty) - rankDifficulty(a.difficulty)),
@@ -86,18 +93,32 @@ const CharacterMissions = () => {
   );
   const current = missions[index];
 
+  const scene = useMemo(() => (current ? buildMissionScene(current.question) : null), [current]);
+  const art = useMemo(
+    () => (current ? getMissionArt(current.question, current.bible_reference, current.difficulty) : null),
+    [current]
+  );
+
   useEffect(() => {
     if (!loading && games.length === 0 && isOnline && shouldGenerate("character_missions")) {
       void generateQuestions("character_missions", 5, { difficulty: "hard" }).then(() => refetch());
     }
   }, [games.length, generateQuestions, isOnline, loading, refetch, shouldGenerate]);
 
-  // Flip card on new mission
+  // Reveal the dialogue bubbles one by one for each new mission.
   useEffect(() => {
-    setFlipped(false);
-    const t = setTimeout(() => setFlipped(true), 400);
-    return () => clearTimeout(t);
-  }, [index]);
+    if (!scene) return;
+    const totalSteps = 3;
+    if (prefersReducedMotion()) {
+      setStep(totalSteps);
+      return;
+    }
+    setStep(0);
+    const timers = [500, 1200, 1900].map((delay, i) => setTimeout(() => setStep(i + 1), delay));
+    return () => timers.forEach(clearTimeout);
+  }, [index, scene]);
+
+  const skipAhead = () => setStep(3);
 
   const selectAnswer = (option: string) => {
     if (!current || answered) return;
@@ -158,7 +179,9 @@ const CharacterMissions = () => {
     );
   }
 
-  if (!current) return null;
+  if (!current || !scene || !art) return null;
+
+  const dialogueDone = step >= 3;
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -167,20 +190,26 @@ const CharacterMissions = () => {
         <XpBar xp={xp} missionsDone={index} total={missions.length} />
       </div>
 
-      {/* Mission Card with flip effect */}
-      <div className={cn(
-        "rounded-2xl border-2 bg-card overflow-hidden transition-all duration-500",
-        flipped ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-      )}>
-        {/* Mission Header */}
-        <div className="bg-gradient-to-br from-primary/15 via-transparent to-primary/5 p-6 text-center border-b border-border">
-          <CharacterSilhouette missionIndex={index} difficulty={current.difficulty} />
-          <div className="mt-3 space-y-1">
-            <p className="text-xs text-muted-foreground uppercase tracking-widest">
+      {/* Comic scene */}
+      <div className="rounded-2xl border-2 border-border bg-card overflow-hidden">
+        {/* Illustration panel */}
+        <div className="relative">
+          <img
+            key={art.src}
+            src={art.src}
+            alt={art.alt}
+            loading="lazy"
+            width={768}
+            height={768}
+            className="w-full h-52 sm:h-64 object-cover animate-fade-in"
+          />
+          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-card to-transparent" />
+          <div className="absolute top-3 left-3 flex items-center gap-2">
+            <span className="rounded-full bg-background/85 backdrop-blur px-3 py-1 text-xs font-semibold">
               {MISSION_ICONS[index % MISSION_ICONS.length]} Mission {index + 1}
-            </p>
+            </span>
             <span className={cn(
-              "inline-block px-3 py-0.5 rounded-full text-xs font-semibold",
+              "rounded-full px-2.5 py-1 text-[10px] font-bold tracking-wide",
               current.difficulty === "easy" && "bg-green-500/20 text-green-500",
               current.difficulty === "medium" && "bg-yellow-500/20 text-yellow-500",
               current.difficulty === "hard" && "bg-red-500/20 text-red-500"
@@ -190,54 +219,82 @@ const CharacterMissions = () => {
           </div>
         </div>
 
-        {/* Mission Briefing */}
-        <div className="px-5 py-4">
-          <p className="text-xs text-muted-foreground mb-1">
-            📖 {current.bible_reference || "Mission scripture"}
-          </p>
-          <h3 className="text-lg font-bold leading-snug">{current.question}</h3>
-        </div>
+        {/* Dialogue */}
+        <div className="px-4 pt-3 pb-4 space-y-2.5" onClick={dialogueDone ? undefined : skipAhead}>
+          <p className="text-xs text-muted-foreground">📖 {current.bible_reference || "Mission scripture"}</p>
 
-        {/* Options */}
-        <div className="px-4 pb-4 space-y-2.5">
-          {current.options?.map((option) => {
-            const correct = answered && option === current.correct_answer;
-            const wrong = answered && option === selected && option !== current.correct_answer;
-            return (
-              <button
-                key={option}
-                onClick={() => selectAnswer(option)}
-                disabled={answered}
-                className={cn(
-                  "w-full p-4 rounded-xl border-2 text-left transition-all duration-300",
-                  !answered && "border-border hover:border-primary hover:bg-primary/5",
-                  correct && "border-green-500 bg-green-500/10 scale-[1.02]",
-                  wrong && "border-red-500 bg-red-500/10",
-                  answered && !correct && !wrong && "opacity-40"
-                )}
-              >
-                <span className="flex items-center justify-between gap-2">
-                  <span className="font-medium">{option}</span>
-                  {correct && <CheckCircle className="w-5 h-5 text-green-500" />}
-                  {wrong && <XCircle className="w-5 h-5 text-red-500" />}
-                </span>
-              </button>
-            );
-          })}
+          {scene.narration && (
+            <SpeechBubble tone="narration" visible={step >= 1}>{scene.narration}</SpeechBubble>
+          )}
+          {scene.situation && (
+            <SpeechBubble tone="character" visible={step >= (scene.narration ? 2 : 1)}>
+              {scene.situation}
+            </SpeechBubble>
+          )}
+          <SpeechBubble tone="question" visible={dialogueDone}>{scene.question}</SpeechBubble>
 
-          {answered && (
-            <div className="space-y-3 mt-2">
-              {current.hint && (
-                <div className="bg-muted/50 rounded-lg p-3 text-sm text-foreground/80">
-                  💡 {current.hint}
-                </div>
-              )}
-              <Button className="w-full" onClick={nextMission}>
-                {index >= missions.length - 1 ? "⚔️ Complete All Missions" : "Next Mission →"}
-              </Button>
-            </div>
+          {!dialogueDone && (
+            <button
+              type="button"
+              onClick={skipAhead}
+              className="text-xs text-muted-foreground underline underline-offset-2"
+            >
+              Skip scene
+            </button>
           )}
         </div>
+
+        {/* Reply bubbles */}
+        {dialogueDone && (
+          <div className="px-4 pb-4 space-y-2.5 animate-fade-in">
+            {current.options?.map((option) => {
+              const correct = answered && option === current.correct_answer;
+              const wrong = answered && option === selected && option !== current.correct_answer;
+              return (
+                <div key={option} className="flex justify-end">
+                  <button
+                    onClick={() => selectAnswer(option)}
+                    disabled={answered}
+                    className={cn(
+                      "relative max-w-[92%] rounded-2xl rounded-br-sm border-2 px-4 py-3 text-left text-sm transition-all duration-300",
+                      !answered && "border-border bg-background hover:border-primary hover:bg-primary/5",
+                      answered && !correct && !wrong && "border-border opacity-40",
+                      correct && "border-green-500 bg-green-500/10 scale-[1.02]",
+                      wrong && "border-red-500 bg-red-500/10"
+                    )}
+                  >
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="font-medium">{option}</span>
+                      {correct && <CheckCircle className="w-5 h-5 text-green-500 shrink-0" />}
+                      {wrong && <XCircle className="w-5 h-5 text-red-500 shrink-0" />}
+                    </span>
+                  </button>
+                </div>
+              );
+            })}
+
+            {answered && (
+              <div className="space-y-3 mt-2">
+                <SpeechBubble
+                  tone="character"
+                  visible
+                >
+                  {selected === current.correct_answer
+                    ? "⚔️ Well done — that is exactly it!"
+                    : `Not quite. The right answer is: ${current.correct_answer}`}
+                </SpeechBubble>
+                {current.hint && (
+                  <div className="bg-muted/50 rounded-lg p-3 text-sm text-foreground/80">
+                    💡 {current.hint}
+                  </div>
+                )}
+                <Button className="w-full" onClick={nextMission}>
+                  {index >= missions.length - 1 ? "⚔️ Complete All Missions" : "Next Mission →"}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
