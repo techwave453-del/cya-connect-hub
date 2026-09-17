@@ -18,10 +18,10 @@ sealed interface AuthUiState {
     data class SignedIn(val profile: UserProfile?) : AuthUiState
 }
 
-class AuthViewModel(
-    private val authRepository: AuthRepository = AuthRepository(),
-    private val profileRepository: ProfileRepository = ProfileRepository()
-) : ViewModel() {
+class AuthViewModel : ViewModel() {
+    private val authRepository = AuthRepository()
+    private val profileRepository = ProfileRepository()
+
     private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.Loading)
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
@@ -51,9 +51,7 @@ class AuthViewModel(
     }
 
     fun signIn(email: String, password: String) {
-        submit {
-            authRepository.signIn(email, password)
-        }
+        submit { authRepository.signIn(email, password) }
     }
 
     fun signUp(email: String, password: String, username: String) {
@@ -64,9 +62,7 @@ class AuthViewModel(
     }
 
     fun signOut() {
-        submit {
-            authRepository.signOut()
-        }
+        submit { authRepository.signOut() }
     }
 
     fun clearFeedback() {
@@ -81,7 +77,8 @@ class AuthViewModel(
             try {
                 action()
             } catch (t: Throwable) {
-                _error.value = t.message?.takeIf { it.isNotBlank() } ?: "Something went wrong. Please try again."
+                _error.value = t.message?.takeIf { it.isNotBlank() }
+                    ?: "Something went wrong. Please try again."
             } finally {
                 _busy.value = false
             }
