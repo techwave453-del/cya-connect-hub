@@ -1,46 +1,37 @@
-# CYA Connect Hub — Android
+# CYA Connect Hub — Native Android
 
-Native Android client for CYA Connect Hub.
+Native Android client for CYA Connect Hub. The app connects directly to Supabase and does not depend on the website server for core application data.
 
-## Architecture rule
+## Local Supabase configuration
 
-The Android application connects directly to Supabase. It must not depend on the CYA Connect Hub website server for core application data.
+1. Copy `local.properties.example` to `local.properties`.
+2. Set `SUPABASE_URL` to the project's Supabase URL.
+3. Set `SUPABASE_PUBLISHABLE_KEY` to the project's publishable/anon client key.
+4. Never put a Supabase secret/service-role key in the Android application.
+5. `local.properties` is ignored by Git.
 
-## Current milestone
+Open the `android/` directory in Android Studio.
 
-**Phase 1 — Android Foundation**
+Minimum SDK: 26  
+Target SDK: 35  
+Application ID: `com.cyaconnecthub.mobile`
 
-- [x] Native Android module created
-- [x] Kotlin + Jetpack Compose foundation
-- [x] Material 3 foundation
-- [x] Navigation dependency prepared
-- [ ] Supabase client
-- [ ] Secure runtime configuration
-- [ ] Authentication
-- [ ] Session restoration
-- [ ] Profile bootstrap
-- [ ] Home bootstrap
-- [ ] Room/offline layer
+## Foundation milestone
 
-## Local configuration
+- [x] Native Android Gradle foundation
+- [x] Kotlin + Jetpack Compose + Material 3
+- [x] Supabase Kotlin client
+- [x] Local-only Supabase configuration
+- [x] Email/password sign in
+- [x] Email/password registration
+- [x] Session restoration
+- [x] Profile bootstrap
+- [x] Initial authenticated Home shell
+- [ ] Offline cache
+- [ ] Bottom navigation
+- [ ] Posts/home feed
+- [ ] Profile editing
 
-Do not commit Supabase credentials. The first implementation will load the project URL and publishable key from local/Gradle configuration.
+## Security
 
-## Development order
-
-1. Foundation
-2. Authentication and session management
-3. Profile
-4. Home and posts
-5. Offline-first infrastructure
-6. Chat and groups
-7. Notifications
-8. Search
-9. Games
-10. Bible and AI
-11. Administration
-12. Security and release testing
-
-## First APK milestone
-
-The first test APK is targeted for the foundation/auth milestone. It should install, start, authenticate against Supabase, restore a session, load the user's profile, and provide a basic Home shell before feature development continues.
+The Android app is a public client. Authorization remains enforced by Supabase Auth, Postgres RLS, Storage policies, and trusted Edge Functions. No service-role key or other backend secret belongs in the APK.
