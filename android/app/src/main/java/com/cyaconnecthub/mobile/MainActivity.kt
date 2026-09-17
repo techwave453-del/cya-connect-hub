@@ -33,6 +33,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cyaconnecthub.mobile.core.database.SupabaseClientProvider
 import com.cyaconnecthub.mobile.feature.auth.AuthUiState
 import com.cyaconnecthub.mobile.feature.auth.AuthViewModel
+import com.cyaconnecthub.mobile.feature.home.HomeShell
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,7 +52,7 @@ private fun CyaConnectHubApp(authViewModel: AuthViewModel = viewModel()) {
                 !SupabaseClientProvider.isConfigured -> ConfigurationRequiredScreen()
                 authState is AuthUiState.Loading -> LoadingScreen()
                 authState is AuthUiState.SignedIn -> {
-                    HomeScreen(authViewModel, authState as AuthUiState.SignedIn)
+                    HomeShell(authViewModel, authState as AuthUiState.SignedIn)
                 }
                 else -> AuthScreen(authViewModel)
             }
@@ -170,23 +171,6 @@ private fun AuthScreen(viewModel: AuthViewModel) {
             modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
         ) {
             Text(if (registerMode) "Already have an account? Sign in" else "Create a new account")
-        }
-    }
-}
-
-@Composable
-private fun HomeScreen(viewModel: AuthViewModel, state: AuthUiState.SignedIn) {
-    val username = state.profile?.username ?: "Member"
-
-    Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Text("Welcome, $username", style = MaterialTheme.typography.headlineMedium)
-        Text("CYA Connect Hub is connected directly to Supabase.")
-        Text("The native home shell is ready for the next feature modules.")
-        OutlinedButton(onClick = viewModel::signOut) {
-            Text("Sign out")
         }
     }
 }
