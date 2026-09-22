@@ -13,6 +13,26 @@ import woman from "@/assets/missions/woman.jpg";
 import disciple from "@/assets/missions/disciple.jpg";
 import shepherd from "@/assets/missions/shepherd.jpg";
 
+/** Reusable cartoon illustration set, keyed by scene name. */
+export const MISSION_IMAGES = {
+  noah,
+  gideon,
+  elijah,
+  esther,
+  jeremiah,
+  ananias,
+  eliezer,
+  advisor,
+  prophet,
+  king,
+  warrior,
+  woman,
+  disciple,
+  shepherd,
+} as const;
+
+export type MissionImageKey = keyof typeof MISSION_IMAGES;
+
 export interface MissionArt {
   src: string;
   alt: string;
