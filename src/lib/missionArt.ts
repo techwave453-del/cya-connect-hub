@@ -12,6 +12,12 @@ import warrior from "@/assets/missions/warrior.jpg";
 import woman from "@/assets/missions/woman.jpg";
 import disciple from "@/assets/missions/disciple.jpg";
 import shepherd from "@/assets/missions/shepherd.jpg";
+import jonahStory from "@/assets/stories/jonah-great-fish.jpg";
+import danielStory from "@/assets/stories/daniel-lions-den.jpg";
+import prodigalStory from "@/assets/stories/prodigal-son.jpg";
+import redSeaStory from "@/assets/stories/moses-red-sea.jpg";
+import stormStory from "@/assets/stories/calming-storm.jpg";
+import lazarusStory from "@/assets/stories/raising-of-lazarus.jpg";
 
 /** Reusable cartoon illustration set, keyed by scene name. */
 export const MISSION_IMAGES = {
@@ -29,6 +35,12 @@ export const MISSION_IMAGES = {
   woman,
   disciple,
   shepherd,
+  jonah: jonahStory,
+  daniel: danielStory,
+  prodigal: prodigalStory,
+  redsea: redSeaStory,
+  storm: stormStory,
+  lazarus: lazarusStory,
 } as const;
 
 export type MissionImageKey = keyof typeof MISSION_IMAGES;
